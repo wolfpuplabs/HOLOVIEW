@@ -34,7 +34,6 @@
             overflow-x: hidden;
         }
 
-        /* Spatial Fog Vibe Background Effect */
         body::before {
             content: '';
             position: absolute;
@@ -43,17 +42,6 @@
             background: radial-gradient(circle, var(--accent-glow) 0%, rgba(0,0,0,0) 70%);
             top: 15%;
             left: 20%;
-            z-index: 0;
-            pointer-events: none;
-        }
-        body::after {
-            content: '';
-            position: absolute;
-            width: 500px;
-            height: 500px;
-            background: radial-gradient(circle, rgba(168, 85, 247, 0.1) 0%, rgba(0,0,0,0) 70%);
-            bottom: 10%;
-            right: 15%;
             z-index: 0;
             pointer-events: none;
         }
@@ -87,7 +75,6 @@
             margin-bottom: 24px;
         }
 
-        /* Dual Grid Upload Box */
         .upload-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -118,7 +105,7 @@
 
         .upload-box input { display: none; }
         .box-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
-        .box-sub { font-size: 11px; color: var(--text-muted); }
+        .box-sub { font-size: 11px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
         .btn-spatial {
             background: var(--text-main);
@@ -146,9 +133,8 @@
             box-shadow: none;
         }
 
-        #status { font-size: 13px; margin-top: 14px; font-weight: 500; }
+        #status { font-size: 13px; margin-top: 14px; font-weight: 500; text-align: center; }
 
-        /* Share Link Component */
         #shareSection { margin-top: 24px; display: none; }
         .share-wrapper {
             background: #09090b;
@@ -163,7 +149,6 @@
         .share-text { font-size: 13px; color: var(--accent-spatial); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 85%; }
         .btn-copy { background: #18181b; color: white; border: 1px solid #27272a; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; }
 
-        /* Timer Badge */
         #timerBadge {
             display: none;
             margin: 16px auto 0 auto;
@@ -177,7 +162,6 @@
             width: fit-content;
         }
 
-        /* Pure Black Spatial Fullscreen Viewer Container */
         #viewerContainer {
             width: 100%;
             height: 400px;
@@ -197,7 +181,6 @@
             --poster-color: transparent;
         }
 
-        /* Fullscreen Native Trigger Control */
         .fullscreen-toggle {
             position: absolute;
             bottom: 16px;
@@ -216,7 +199,6 @@
             gap: 6px;
         }
 
-        /* Ketika container masuk mode fullscreen API native */
         #viewerContainer:fullscreen { border-radius: 0; width: 100vw; height: 100vh; margin-top: 0; }
         #viewerContainer:fullscreen .fullscreen-toggle { bottom: 24px; left: 24px; }
     </style>
@@ -237,4 +219,181 @@
             <div id="boxUsdz" class="upload-box" onclick="document.getElementById('inputUsdz').click()">
                 <div class="box-title">🍏 iOS AR Engine</div>
                 <div id="lblUsdz" class="box-sub">Pilih file .usdz (Opsional)</div>
-                <input type="file" id="inputUsdz" accept=".us
+                <input type="file" id="inputUsdz" accept=".usdz">
+            </div>
+        </div>
+
+        <button id="uploadBtn" class="btn-spatial" disabled>Upload & Create Manifest</button>
+        <p id="status"></p>
+
+        <div id="timerBadge">⏱️ Berkala Hancur Dalam: <span id="countdown">--:--:--</span></div>
+
+        <div id="shareSection">
+            <div class="share-wrapper">
+                <span id="shareUrl" class="share-text"></span>
+                <button class="btn-copy" onclick="copyUrl()">Copy</button>
+            </div>
+        </div>
+
+        <div id="viewerContainer">
+            <button class="fullscreen-toggle" onclick="toggleViewFullscreen()">
+                <span>🖥️</span> Fullscreen Mode
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const inputGlb = document.getElementById('inputGlb');
+        const inputUsdz = document.getElementById('inputUsdz');
+        const boxGlb = document.getElementById('boxGlb');
+        const boxUsdz = document.getElementById('boxUsdz');
+        const lblGlb = document.getElementById('lblGlb');
+        const lblUsdz = document.getElementById('lblUsdz');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const status = document.getElementById('status');
+        const shareSection = document.getElementById('shareSection');
+        const shareUrl = document.getElementById('shareUrl');
+        const timerBadge = document.getElementById('timerBadge');
+        const countdown = document.getElementById('countdown');
+        const viewerContainer = document.getElementById('viewerContainer');
+
+        const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+
+        inputGlb.addEventListener('change', () => {
+            if (inputGlb.files[0]?.size > MAX_SIZE) { alert("File GLB lebih dari 10MB!"); inputGlb.value=""; return; }
+            if (inputGlb.files[0]) {
+                boxGlb.classList.add('has-file');
+                lblGlb.innerText = inputGlb.files[0].name;
+            }
+            checkInputs();
+        });
+
+        inputUsdz.addEventListener('change', () => {
+            if (inputUsdz.files[0]?.size > MAX_SIZE) { alert("File USDZ lebih dari 10MB!"); inputUsdz.value=""; return; }
+            if (inputUsdz.files[0]) {
+                boxUsdz.classList.add('has-file');
+                lblUsdz.innerText = inputUsdz.files[0].name;
+            }
+            checkInputs();
+        });
+
+        function checkInputs() {
+            uploadBtn.disabled = !inputGlb.files[0];
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            const modelParam = params.get('glb');
+            const iosParam = params.get('usdz');
+            if (modelParam) {
+                initEngineViewer(modelParam, iosParam);
+                startDestructionTimer();
+            }
+        });
+
+        uploadBtn.addEventListener('click', async () => {
+            uploadBtn.disabled = true;
+            status.innerHTML = "Mengirim Android Engine (.glb) ke Cloud...";
+
+            let urlGlb = "";
+            let urlUsdz = "";
+
+            try {
+                // 1. Upload GLB (Wajib)
+                const resGlb = await fetch(`/api/upload?filename=${encodeURIComponent(inputGlb.files[0].name)}`, {
+                    method: 'POST', body: inputGlb.files[0]
+                });
+                if (!resGlb.ok) throw new Error("Gagal mengunggah file GLB");
+                const dataGlb = await resGlb.json();
+                urlGlb = dataGlb.url;
+
+                // 2. Upload USDZ (Hanya jika dimasukkan user)
+                if (inputUsdz.files[0]) {
+                    status.innerHTML = "Mengonfigurasi iOS AR Engine (.usdz)...";
+                    const resUsdz = await fetch(`/api/upload?filename=${encodeURIComponent(inputUsdz.files[0].name)}`, {
+                        method: 'POST', body: inputUsdz.files[0]
+                    });
+                    if (!resUsdz.ok) throw new Error("Gagal mengunggah file USDZ");
+                    const dataUsdz = await resUsdz.json();
+                    urlUsdz = dataUsdz.url;
+                }
+
+                status.innerHTML = "<span style='color:#10b981;'>Engine Sinkronisasi Berhasil!</span>";
+                
+                let shareLink = `${window.location.origin}${window.location.pathname}?glb=${encodeURIComponent(urlGlb)}`;
+                if(urlUsdz) shareLink += `&usdz=${encodeURIComponent(urlUsdz)}`;
+
+                shareUrl.innerText = shareLink;
+                shareSection.style.display = 'block';
+
+                initEngineViewer(urlGlb, urlUsdz);
+                startDestructionTimer();
+
+            } catch (err) {
+                status.innerHTML = `<span style='color:#ef4444;'>Error: ${err.message}</span>`;
+                uploadBtn.disabled = false;
+            }
+        });
+
+        function initEngineViewer(glbUrl, usdzUrl) {
+            viewerContainer.style.display = 'block';
+            const oldViewer = viewerContainer.querySelector('model-viewer');
+            if (oldViewer) oldViewer.remove();
+
+            const viewer = document.createElement('model-viewer');
+            viewer.setAttribute('src', glbUrl);
+            viewer.setAttribute('ar', '');
+            viewer.setAttribute('ar-modes', 'webxr scene-viewer quick-look');
+            viewer.setAttribute('camera-controls', '');
+            viewer.setAttribute('auto-rotate', '');
+            viewer.setAttribute('shadow-intensity', '1');
+            viewer.setAttribute('autoplay', '');
+
+            viewer.addEventListener('load', () => {
+                const anims = viewer.availableAnimations;
+                if (anims && anims.length > 0) {
+                    viewer.animationName = anims[0];
+                    viewer.play();
+                }
+            });
+
+            if (usdzUrl && usdzUrl !== "null" && usdzUrl !== "") {
+                viewer.setAttribute('ios-src', usdzUrl);
+            }
+
+            viewerContainer.appendChild(viewer);
+        }
+
+        function startDestructionTimer() {
+            timerBadge.style.display = 'block';
+            setInterval(() => {
+                const now = new Date();
+                const tomorrow = new Date();
+                tomorrow.setHours(24, 0, 0, 0);
+                const diff = tomorrow - now;
+                
+                const hours = String(Math.floor((diff / (1000 * 60 * 60)) % 24)).padStart(2, '0');
+                const minutes = String(Math.floor((diff / (1000 * 60)) % 60)).padStart(2, '0');
+                const seconds = String(Math.floor((diff / 1000) % 60)).padStart(2, '0');
+
+                countdown.innerText = `${hours}:${minutes}:${seconds}`;
+            }, 1000);
+        }
+
+        function toggleViewFullscreen() {
+            if (!document.fullscreenElement) {
+                viewerContainer.requestFullscreen().catch(err => {
+                    alert(`Gagal Fullscreen: ${err.message}`);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        function copyUrl() {
+            navigator.clipboard.writeText(shareUrl.innerText);
+            alert('Link manifest AR berhasil disalin!');
+        }
+    </script>
+</body>
+</html>
