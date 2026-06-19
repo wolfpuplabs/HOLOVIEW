@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D AR Gallery - Vercel Edition</title>
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+  <style>
+    /* Gunakan CSS Anda sebelumnya */
+    body { font-family: sans-serif; padding: 20px; background: #f8fafc; }
+    .container { max-width: 900px; margin: auto; }
+    .viewer { background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; }
+    model-viewer { width: 100%; height: 400px; }
+    .upload-box { background: white; padding: 20px; border-radius: 12px; }
+    input, button { padding: 10px; margin: 5px 0; display: block; width: 100%; }
+    button { background: #4f46e5; color: white; border: none; cursor: pointer; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h1>Galeri 3D</h1>
+  
+  <div class="viewer">
+    <model-viewer id="main-viewer" camera-controls auto-rotate ar></model-viewer>
+  </div>
+
+  <div class="upload-box">
+    <h3>Upload Model .glb</h3>
+    <input type="text" id="model-name" placeholder="Nama Model">
+    <input type="file" id="file-upload" accept=".glb">
+    <button id="upload-btn">Simpan ke Vercel Blob</button>
+    <p id="status"></p>
+  </div>
+
+  <div id="library-grid"></div>
+</div>
+
+<script>
+  const uploadBtn = document.getElementById('upload-btn');
+  const fileInput = document.getElementById('file-upload');
+  const nameInput = document.getElementById('model-name');
+  const status = document.getElementById('status');
+  const viewer = document.getElementById('main-viewer');
+
+  // Load Galeri saat halaman dibuka
+  async function loadLibrary() {
+    const res = await fetch('/api/models');
+    const models = await res.json();
+    const grid = document.getElementById('library-grid');
+    grid.innerHTML = models.map(m => `
+      <div class="card">
+        <p>${m.name}</p>
+        <button onclick="viewer.src='${m.url}'">Lihat</button>
+      </div>
+    `).join('');
+  }
+
+  // Upload ke API Vercel
+  uploadBtn.addEventListener('click', async () => {
+    const file = fileInput.files[0];
+    if (!file) return alert("Pilih file dulu!");
+
+    status.innerText = "Uploading...";
+    
+    const response = await fetch('/api/upload', {
+      method: 'POST',
+      body: file,
+      headers: {
+        'x-vercel-filename': file.name,
+        'x-vercel-model-name': nameInput.value || 'Tanpa Nama'
+      }
+    });
+
+    if (response.ok) {
+      status.innerText = "Berhasil!";
+      loadLibrary();
+    } else {
+      status.innerText = "Gagal!";
+    }
+  });
+
+  loadLibrary();
+</script>
+</body>
+</html>
