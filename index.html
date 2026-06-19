@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>3D Spatial AR Portal</title>
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
     <style>
         :root {
             --bg-pure-black: #000000;
@@ -136,20 +139,6 @@
 
         #status { font-size: 13px; margin-top: 14px; font-weight: 500; text-align: center; }
 
-        #shareSection { margin-top: 24px; display: none; }
-        .share-wrapper {
-            background: #09090b;
-            border: 1px solid #18181b;
-            padding: 10px 14px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-top: 6px;
-        }
-        .share-text { font-size: 13px; color: var(--accent-spatial); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 85%; }
-        .btn-copy { background: #18181b; color: white; border: 1px solid #27272a; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; }
-
         #timerBadge {
             display: none;
             margin: 16px auto 0 auto;
@@ -190,56 +179,253 @@
             backdrop-filter: blur(10px);
             border: 1px solid rgba(255,255,255,0.1);
             color: white;
-            padding: 8px 12px;
+            padding: 8px 16px;
             border-radius: 8px;
-            font-size: 12px;
+            font-size: 13px;
+            font-weight: 600;
             cursor: pointer;
             z-index: 10;
             display: flex;
             align-items: center;
-            gap: 6px;
+            letter-spacing: 0.5px;
         }
 
         #viewerContainer:fullscreen { border-radius: 0; width: 100vw; height: 100vh; margin-top: 0; }
         #viewerContainer:fullscreen .fullscreen-toggle { bottom: 24px; left: 24px; }
+
+        /* POPUP MODAL & AR CARD DESIGN */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            backdrop-filter: blur(8px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            padding: 20px;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal-content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+
+        /* The Card UI Wrapper styled based on the reference design */
+        .ar-card-capture-area {
+            width: 360px;
+            height: 520px;
+            background: #09090b;
+            border-radius: 24px;
+            padding: 24px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            border: 2px solid #1e1e24;
+            box-shadow: 0 0 30px rgba(59, 130, 246, 0.15);
+            overflow: hidden;
+        }
+
+        /* Neon gradient border simulation */
+        .ar-card-capture-area::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 24px;
+            padding: 2px;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6, #000, #3b82f6);
+            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .card-logo-box {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            border: 1px solid #27272a;
+            background: #141416;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .card-title-main {
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            color: #ffffff;
+        }
+
+        .card-title-sub {
+            font-size: 10px;
+            color: #71717a;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .card-preview-body {
+            flex-grow: 1;
+            margin: 16px 0;
+            background: radial-gradient(circle, rgba(30,30,36,0.6) 0%, rgba(0,0,0,0) 80%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .card-preview-body img {
+            max-width: 85%;
+            max-height: 85%;
+            object-fit: contain;
+        }
+
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            border-top: 1px solid #18181b;
+            padding-top: 16px;
+        }
+
+        .card-meta-info {
+            background: #020205;
+            border: 1px solid #141416;
+            padding: 12px;
+            border-radius: 14px;
+            min-width: 160px;
+        }
+
+        .meta-row {
+            font-size: 11px;
+            margin-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .meta-row:last-child { margin-bottom: 0; }
+        .meta-label { color: #52525b; text-transform: uppercase; font-weight: 600; }
+        .meta-value { color: #f4f4f5; font-weight: 700; max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
+
+        .card-qr-container {
+            width: 95px;
+            height: 95px;
+            background: #ffffff;
+            padding: 6px;
+            border-radius: 14px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+        }
+
+        .card-qr-container div {
+            width: 100%;
+            height: 100%;
+        }
+
+        .action-buttons-wrapper {
+            display: flex;
+            gap: 12px;
+            width: 100%;
+        }
+
+        .btn-modal {
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            flex: 1;
+            text-align: center;
+        }
+
+        .btn-modal-save { background: #ffffff; color: #000000; }
+        .btn-modal-close { background: #18181b; color: #a1a1aa; border: 1px solid #27272a; }
     </style>
 </head>
 <body>
 
     <div class="container">
         <h1>3D Spatial AR Portal</h1>
-        <p class="subtitle">Instant Local Preview Terpasang. File di-upload baru hancur tengah malam.</p>
+        <p class="subtitle">Instant local preview active. Assets hosted on cloud expire at midnight.</p>
 
         <div class="upload-grid">
             <div id="boxGlb" class="upload-box" onclick="document.getElementById('inputGlb').click()">
-                <div class="box-title">🤖 Android / Web Engine</div>
-                <div id="lblGlb" class="box-sub">Pilih file .glb (Wajib)</div>
+                <div class="box-title">Android / Web Engine</div>
+                <div id="lblGlb" class="box-sub">Choose .glb file (Required)</div>
                 <input type="file" id="inputGlb" accept=".glb">
             </div>
 
             <div id="boxUsdz" class="upload-box" onclick="document.getElementById('inputUsdz').click()">
-                <div class="box-title">🍏 iOS AR Engine</div>
-                <div id="lblUsdz" class="box-sub">Pilih file .usdz (Opsional)</div>
+                <div class="box-title">iOS AR Engine</div>
+                <div id="lblUsdz" class="box-sub">Choose .usdz file (Optional)</div>
                 <input type="file" id="inputUsdz" accept=".usdz">
             </div>
         </div>
 
-        <button id="uploadBtn" class="btn-spatial" disabled>Publish & Get Share Link</button>
+        <button id="uploadBtn" class="btn-spatial" disabled>Publish & Get Share Card</button>
         <p id="status"></p>
 
-        <div id="timerBadge">⏱️ Berkala Hancur Dalam: <span id="countdown">--:--:--</span></div>
-
-        <div id="shareSection">
-            <div class="share-wrapper">
-                <span id="shareUrl" class="share-text"></span>
-                <button class="btn-copy" onclick="copyUrl()">Copy</button>
-            </div>
-        </div>
+        <div id="timerBadge">Expires In: <span id="countdown">--:--:--</span></div>
 
         <div id="viewerContainer">
             <button class="fullscreen-toggle" onclick="toggleViewFullscreen()">
-                <span>🖥️</span> Fullscreen Mode
+                View in Holo
             </button>
+        </div>
+    </div>
+
+    <div id="shareModal" class="modal-overlay">
+        <div class="modal-content">
+            <div id="arCard" class="ar-card-capture-area">
+                <div class="card-header">
+                    <div class="card-logo-box">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                    </div>
+                    <div>
+                        <div class="card-title-main">CREARTOR</div>
+                        <div class="card-title-sub">WebAR Viewer Portal</div>
+                    </div>
+                </div>
+
+                <div class="card-preview-body">
+                    <img id="cardSnapshot" src="" alt="3D Model Preview">
+                </div>
+
+                <div class="card-footer">
+                    <div class="card-meta-info">
+                        <div class="meta-row"><span class="meta-label">Model</span><span id="metaName" class="meta-value">Unknown</span></div>
+                        <div class="meta-row"><span class="meta-label">Size</span><span id="metaSize" class="meta-value">0.0 MB</span></div>
+                    </div>
+                    <div class="card-qr-container">
+                        <div id="qrcode"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="action-buttons-wrapper">
+                <button class="btn-modal btn-modal-close" onclick="closeModal()">Close</button>
+                <button class="btn-modal btn-modal-save" onclick="saveCardToPhotos()">Save to Photos</button>
+            </div>
         </div>
     </div>
 
@@ -252,38 +438,41 @@
         const lblUsdz = document.getElementById('lblUsdz');
         const uploadBtn = document.getElementById('uploadBtn');
         const status = document.getElementById('status');
-        const shareSection = document.getElementById('shareSection');
-        const shareUrl = document.getElementById('shareUrl');
         const timerBadge = document.getElementById('timerBadge');
         const countdown = document.getElementById('countdown');
         const viewerContainer = document.getElementById('viewerContainer');
+        
+        const shareModal = document.getElementById('shareModal');
+        const cardSnapshot = document.getElementById('cardSnapshot');
+        const metaName = document.getElementById('metaName');
+        const metaSize = document.getElementById('metaSize');
+        const qrcodeContainer = document.getElementById('qrcode');
 
-        const MAX_SIZE = 10 * 1024 * 1024; // Limitasi ukuran file: 10MB
+        const MAX_SIZE = 10 * 1024 * 1024; // 10MB limit
         let localGlbUrl = "";
         let localUsdzUrl = "";
         let timerInterval = null;
+        let qrCodeInstance = null;
 
-        // INSTAN PREVIEW SAAT FILE GLB DIPILIH
+        // INLINE LOCAL PREVIEW (GLB)
         inputGlb.addEventListener('change', () => {
-            if (inputGlb.files[0]?.size > MAX_SIZE) { alert("File GLB lebih dari 10MB!"); inputGlb.value=""; return; }
+            if (inputGlb.files[0]?.size > MAX_SIZE) { alert("GLB file size exceeds 10MB limit!"); inputGlb.value=""; return; }
             if (inputGlb.files[0]) {
                 boxGlb.classList.add('has-file');
                 lblGlb.innerText = inputGlb.files[0].name;
                 
-                // Bersihkan Object URL lama agar tidak boros RAM browser
                 if (localGlbUrl) URL.revokeObjectURL(localGlbUrl);
                 localGlbUrl = URL.createObjectURL(inputGlb.files[0]);
                 
-                // Jalankan Engine Viewer lokal secara instan
                 initEngineViewer(localGlbUrl, localUsdzUrl);
-                status.innerHTML = "<span style='color:#3b82f6;'>Local Preview Aktif. Siap di-view/di-AR!</span>";
+                status.innerHTML = "<span style='color:#3b82f6;'>Local Preview Active. Ready to view in Holo!</span>";
             }
             checkInputs();
         });
 
-        // INSTAN PREVIEW UNTUK USDZ (iOS QUICK LOOK)
+        // INLINE LOCAL PREVIEW (USDZ)
         inputUsdz.addEventListener('change', () => {
-            if (inputUsdz.files[0]?.size > MAX_SIZE) { alert("File USDZ lebih dari 10MB!"); inputUsdz.value=""; return; }
+            if (inputUsdz.files[0]?.size > MAX_SIZE) { alert("USDZ file size exceeds 10MB limit!"); inputUsdz.value=""; return; }
             if (inputUsdz.files[0]) {
                 boxUsdz.classList.add('has-file');
                 lblUsdz.innerText = inputUsdz.files[0].name;
@@ -302,7 +491,6 @@
             uploadBtn.disabled = !inputGlb.files[0];
         }
 
-        // Tangani Link Cloud dari URL Parameter saat load (?glb=...&usdz=...)
         window.addEventListener('DOMContentLoaded', () => {
             const params = new URLSearchParams(window.location.search);
             const modelParam = params.get('glb');
@@ -313,58 +501,53 @@
             }
         });
 
-        // PROSES UPLOAD/PUBLISH KE CLOUD VERCEL API
+        // CLOUD STORAGE UPLOAD INTERACTION
         uploadBtn.addEventListener('click', async () => {
             uploadBtn.disabled = true;
-            status.innerHTML = "Mengirim Manifest Permanen ke Cloud Vercel...";
+            status.innerHTML = "Pushing Spatial Manifest onto Vercel Architecture...";
 
             try {
-                // 1. Upload file GLB utama
                 const resGlb = await fetch(`/api/upload?filename=${encodeURIComponent(inputGlb.files[0].name)}`, {
                     method: 'POST', body: inputGlb.files[0]
                 });
-                if (!resGlb.ok) throw new Error("Gagal mengunggah file GLB");
+                if (!resGlb.ok) throw new Error("GLB synchronization pipeline failure.");
                 const dataGlb = await resGlb.json();
 
-                // 2. Upload file USDZ jika dilampirkan
                 let cloudUsdzUrl = "";
                 if (inputUsdz.files[0]) {
-                    status.innerHTML = "Menyinkronkan iOS Engine ke Cloud...";
+                    status.innerHTML = "Synchronizing ecosystem pipeline with iOS Engine...";
                     const resUsdz = await fetch(`/api/upload?filename=${encodeURIComponent(inputUsdz.files[0].name)}`, {
                         method: 'POST', body: inputUsdz.files[0]
                     });
-                    if (!resUsdz.ok) throw new Error("Gagal mengunggah file USDZ");
+                    if (!resUsdz.ok) throw new Error("USDZ asset allocation refused by server.");
                     const dataUsdz = await resUsdz.json();
                     cloudUsdzUrl = dataUsdz.url;
                 }
 
-                status.innerHTML = "<span style='color:#10b981;'>Published! File tersimpan di Cloud sampai tengah malam.</span>";
+                status.innerHTML = "<span style='color:#10b981;'>Published successfully! Active until midnight.</span>";
                 
                 let shareLink = `${window.location.origin}${window.location.pathname}?glb=${encodeURIComponent(dataGlb.url)}`;
                 if(cloudUsdzUrl) shareLink += `&usdz=${encodeURIComponent(cloudUsdzUrl)}`;
 
-                shareUrl.innerText = shareLink;
-                shareSection.style.display = 'block';
-
-                // Hapus alokasi Object URL lokal karena asset sudah bergeser menggunakan cloud URL
+                // Clear temporary memory allocations
                 if (localGlbUrl) { URL.revokeObjectURL(localGlbUrl); localGlbUrl = ""; }
                 if (localUsdzUrl) { URL.revokeObjectURL(localUsdzUrl); localUsdzUrl = ""; }
 
-                // Inisialisasi ulang menggunakan link resmi cloud
                 initEngineViewer(dataGlb.url, cloudUsdzUrl);
                 startDestructionTimer();
+                
+                // Construct and display the pop-up share card interface
+                triggerShareCard(shareLink, inputGlb.files[0].name, inputGlb.files[0].size);
 
             } catch (err) {
-                status.innerHTML = `<span style='color:#ef4444;'>Error Cloud: ${err.message}</span>`;
+                status.innerHTML = `<span style='color:#ef4444;'>Cloud pipeline exception: ${err.message}</span>`;
                 uploadBtn.disabled = false;
             }
         });
 
-        // BUILD DYNAMIC COMPONENT UNTUK MODEL VIEWER
         function initEngineViewer(glbUrl, usdzUrl) {
             viewerContainer.style.display = 'block';
             
-            // Hapus instansi model lama agar tidak terjadi memory leak dan conflict DOM
             const oldViewer = viewerContainer.querySelector('model-viewer');
             if (oldViewer) oldViewer.remove();
 
@@ -375,9 +558,8 @@
             viewer.setAttribute('camera-controls', '');
             viewer.setAttribute('auto-rotate', '');
             viewer.setAttribute('shadow-intensity', '1');
-            viewer.setAttribute('autoplay', '');
+            viewer.setAttribute('crossorigin', 'anonymous');
 
-            // Solusi Perbaikan Bug Animasi: Memastikan animasi terdeteksi sempurna setelah asset ter-load
             viewer.addEventListener('load', () => {
                 setTimeout(() => {
                     const anims = viewer.availableAnimations;
@@ -392,26 +574,84 @@
                 viewer.setAttribute('ios-src', usdzUrl);
             }
 
-            // Gunakan prepend agar model viewer berada di belakang/bawah tombol fullscreen toggle
             viewerContainer.prepend(viewer);
         }
 
-        // TIMER PENGHANCURAN OTOMATIS (COUNTDOWN HINGGA TENGAH MALAM)
-        function startDestructionTimer() {
-            if (timerInterval) clearInterval(timerInterval); // Bersihkan interval yang aktif sebelumnya
+        // SHARE CARD COMPONENT GENERATOR
+        function triggerShareCard(url, filename, sizeInBytes) {
+            // Update textual card parameters
+            const displaySize = (sizeInBytes / (1024 * 1024)).toFixed(1) + " MB";
+            const displayName = filename.replace(/\.[^/.]+$/, ""); // Strip file extension
             
+            metaName.innerText = displayName;
+            metaSize.innerText = displaySize;
+
+            // Generate clean vector QR Code inside card bounds
+            qrcodeContainer.innerHTML = "";
+            qrCodeInstance = new QRCode(qrcodeContainer, {
+                text: url,
+                width: 85,
+                height: 85,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+
+            // Extract high-res static frame matrix from structural <model-viewer> engine
+            const viewer = viewerContainer.querySelector('model-viewer');
+            if(viewer) {
+                // Microtask delay ensuring active buffer translation maps cleanly to base64 uri data
+                setTimeout(() => {
+                    const dataUrl = viewer.toDataURL("image/png");
+                    cardSnapshot.src = dataUrl;
+                    shareModal.classList.add('active');
+                }, 300);
+            } else {
+                shareModal.classList.add('active');
+            }
+        }
+
+        function closeModal() {
+            shareModal.classList.remove('active');
+            uploadBtn.disabled = false;
+        }
+
+        // SAVE TO PHOTOS COMPONENT ENGINE via html2canvas
+        function saveCardToPhotos() {
+            const cardElement = document.getElementById('arCard');
+            status.innerHTML = "Generating premium print layout container...";
+            
+            html2canvas(cardElement, {
+                useCORS: true,
+                allowTaint: true,
+                backgroundColor: "#000000",
+                scale: 2 // High definition matrix scaler rendering
+            }).then(canvas => {
+                const image = canvas.toDataURL("image/png");
+                const link = document.createElement('a');
+                link.download = `${metaName.innerText || 'AR'}_Share_Card.png`;
+                link.href = image;
+                link.click();
+                status.innerHTML = "<span style='color:#10b981;'>Card successfully saved to downloads folder!</span>";
+            }).catch(err => {
+                alert("Vector mapping serialization failed: " + err.message);
+            });
+        }
+
+        function startDestructionTimer() {
+            if (timerInterval) clearInterval(timerInterval);
             timerBadge.style.display = 'block';
             
             const updateCountdown = () => {
                 const now = new Date();
                 const tomorrow = new Date();
-                tomorrow.setHours(24, 0, 0, 0); // Target ke jam 00:00:00 malam ini
+                tomorrow.setHours(24, 0, 0, 0);
                 const diff = tomorrow - now;
                 
                 if (diff <= 0) {
                     countdown.innerText = "00:00:00";
                     clearInterval(timerInterval);
-                    location.reload(); // Refresh halaman saat siklus waktu habis
+                    location.reload();
                     return;
                 }
                 
@@ -426,24 +666,14 @@
             timerInterval = setInterval(updateCountdown, 1000);
         }
 
-        // TOGGLE FULLSCREEN VIEW
         function toggleViewFullscreen() {
             if (!document.fullscreenElement) {
                 viewerContainer.requestFullscreen().catch(err => {
-                    alert(`Gagal Fullscreen: ${err.message}`);
+                    alert(`Holo Engine failed to scale viewport: ${err.message}`);
                 });
             } else {
                 document.exitFullscreen();
             }
-        }
-
-        // SALIN TAUTAN BAGIKAN KE CLIPBOARD
-        function copyUrl() {
-            navigator.clipboard.writeText(shareUrl.innerText).then(() => {
-                alert('Link manifest AR berhasil disalin!');
-            }).catch(() => {
-                alert('Gagal menyalin link secara otomatis.');
-            });
         }
     </script>
 </body>
