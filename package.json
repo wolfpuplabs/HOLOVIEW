@@ -1,0 +1,11 @@
+{
+  "name": "3d-asset-library",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "vercel-dev": "vercel dev"
+  },
+  "dependencies": {
+    "@vercel/blob": "^0.23.4"
+  }
+}

@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Asset Library & AR Viewer</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <!-- Model Viewer CDN -->
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
+    <style>
+        model-viewer {
+            width: 100%;
+            height: 500px;
+            background-color: #f3f4f6;
+            border-radius: 0.5rem;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-900 min-h-screen">
+    <div class="max-w-4xl mx-auto px-4 py-8">
+        <header class="mb-8 text-center">
+            <h1 class="text-4xl font-extrabold text-gray-900 mb-2">📦 3D Asset Library</h1>
+            <p class="text-gray-600">Upload GLB/USDZ files, view them in AR, and share the link easily.</p>
+        </header>
+
+        <!-- Upload Box -->
+        <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200 mb-8">
+            <h2 class="text-xl font-bold mb-4 text-gray-800">Upload New 3D Model</h2>
+            <form id="uploadForm" class="space-y-4">
+                <div class="flex items-center justify-center w-full">
+                    <label class="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
+                        <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                            <svg class="w-8 h-8 mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                            <p class="mb-2 text-sm text-gray-500"><span class="font-semibold">Click to upload</span> or drag and drop</p>
+                            <p class="text-xs text-gray-500">GLB or USDZ formats only</p>
+                        </div>
+                        <input id="fileInput" type="file" accept=".glb,.usdz" class="hidden" required />
+                    </label>
+                </div>
+                <div id="fileInfo" class="text-sm text-gray-600 hidden text-center font-medium"></div>
+                <button type="submit" id="uploadBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-lg transition duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed">
+                    Upload to Vercel Blob
+                </button>
+            </form>
+            
+            <!-- Progress/Status Message -->
+            <div id="statusMessage" class="mt-4 p-3 rounded-lg text-sm hidden text-center"></div>
+        </div>
+
+        <!-- Preview & Share Box -->
+        <div id="previewContainer" class="bg-white p-6 rounded-xl shadow-md border border-gray-200 hidden">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
+                <div>
+                    <h2 class="text-xl font-bold text-gray-800">3D Preview & AR</h2>
+                    <p class="text-xs text-gray-500 mt-1">*Open this page on a mobile device to enable AR features.</p>
+                </div>
+                <div class="flex items-center gap-2 w-full md:w-auto">
+                    <input type="text" id="shareUrl" readonly class="bg-gray-100 border border-gray-300 text-gray-600 text-sm rounded-lg p-2 flex-1 md:w-64" />
+                    <button id="copyBtn" class="bg-gray-800 hover:bg-gray-900 text-white text-sm font-semibold py-2 px-4 rounded-lg transition duration-200 shrink-0">
+                        Copy Link
+                    </button>
+                </div>
+            </div>
+
+            <!-- Model Viewer Container -->
+            <div id="viewerWrapper" class="relative">
+                <!-- Dynamic model-viewer goes here -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const fileInfo = document.getElementById('fileInfo');
+        const uploadForm = document.getElementById('uploadForm');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const statusMessage = document.getElementById('statusMessage');
+        const previewContainer = document.getElementById('previewContainer');
+        const shareUrl = document.getElementById('shareUrl');
+        const copyBtn = document.getElementById('copyBtn');
+        const viewerWrapper = document.getElementById('viewerWrapper');
+
+        // Show selected filename
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                fileInfo.textContent = `Selected file: ${e.target.files[0].name}`;
+                fileInfo.classList.remove('hidden');
+            } else {
+                fileInfo.classList.add('hidden');
+            }
+        });
+
+        // Handle share URL logic from URL query parameter (for shareable links)
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const modelParam = urlParams.get('model');
+            const nameParam = urlParams.get('name') || 'model.glb';
+            if (modelParam) {
+                showModel(modelParam, nameParam);
+            }
+        });
+
+        uploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const file = fileInput.files[0];
+            if (!file) return;
+
+            uploadBtn.disabled = true;
+            uploadBtn.textContent = 'Uploading...';
+            showStatus('Uploading file to Vercel Blob, please wait...', 'bg-blue-50 text-blue-700 border border-blue-200');
+
+            try {
+                const response = await fetch(`/api/upload?filename=${encodeURIComponent(file.name)}`, {
+                    method: 'POST',
+                    body: file
+                });
+
+                if (!response.ok) {
+                    throw new Error('Upload failed server side');
+                }
+
+                const data = await response.json();
+                
+                // Create shareable web app link instead of raw asset download link
+                const currentUrl = new URL(window.location.href);
+                currentUrl.searchParams.set('model', data.url);
+                currentUrl.searchParams.set('name', file.name);
+                const appShareLink = currentUrl.toString();
+
+                showStatus('Upload successful!', 'bg-green-50 text-green-700 border border-green-200');
+                showModel(data.url, file.name, appShareLink);
+            } catch (error) {
+                console.error(error);
+                showStatus('Error uploading file. Make sure BLOB_READ_WRITE_TOKEN is configured in Vercel.', 'bg-red-50 text-red-700 border border-red-200');
+            } finally {
+                uploadBtn.disabled = false;
+                uploadBtn.textContent = 'Upload to Vercel Blob';
+            }
+        });
+
+        function showStatus(msg, classes) {
+            statusMessage.className = `mt-4 p-3 rounded-lg text-sm text-center ${classes}`;
+            statusMessage.textContent = msg;
+            statusMessage.classList.remove('hidden');
+        }
+
+        function showModel(modelUrl, filename, appShareLink = window.location.href) {
+            previewContainer.classList.remove('hidden');
+            shareUrl.value = appShareLink;
+            
+            // Clear old viewer
+            viewerWrapper.innerHTML = '';
+
+            // Build modern model-viewer
+            const viewer = document.createElement('model-viewer');
+            viewer.setAttribute('src', modelUrl);
+            viewer.setAttribute('alt', 'A 3D model uploaded by user');
+            viewer.setAttribute('ar', '');
+            viewer.setAttribute('ar-modes', 'webxr scene-viewer quick-look');
+            viewer.setAttribute('camera-controls', '');
+            viewer.setAttribute('auto-rotate', '');
+            viewer.setAttribute('shadow-intensity', '1');
+            
+            // Handle iOS USDZ quick look if it's a USDZ file
+            if (filename.toLowerCase().endsWith('.usdz')) {
+                viewer.setAttribute('ios-src', modelUrl);
+            }
+
+            viewerWrapper.appendChild(viewer);
+            previewContainer.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        copyBtn.addEventListener('click', () => {
+            shareUrl.select();
+            navigator.clipboard.writeText(shareUrl.value);
+            const originalText = copyBtn.textContent;
+            copyBtn.textContent = 'Copied!';
+            copyBtn.classList.replace('bg-gray-800', 'bg-green-600');
+            setTimeout(() => {
+                copyBtn.textContent = originalText;
+                copyBtn.classList.replace('bg-green-600', 'bg-gray-800');
+            }, 2000);
+        });
+    </script>
+</body>
+</html>
