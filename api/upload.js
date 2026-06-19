@@ -2,7 +2,7 @@ import { put } from '@vercel/blob';
 
 export const config = {
   api: {
-    bodyParser: false, // Tetep matiin biar file 3D nggak rusak
+    bodyParser: false,
   },
 };
 
@@ -18,22 +18,21 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 1. Kumpulin potongan file-nya jadi satu kesatuan (Buffer)
     const chunks = [];
     for await (const chunk of req) {
       chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
     }
     const fileBuffer = Buffer.concat(chunks);
 
-    // 2. Upload Buffer yang udah utuh ke Vercel Blob
     const blob = await put(filename, fileBuffer, {
       access: 'public',
+      // KITA PAKSA MASUKIN TOKENNYA DI SINI
+      token: process.env.BLOB_READ_WRITE_TOKEN,
     });
 
     return res.status(200).json(blob);
   } catch (error) {
-    // 3. Tulis error aslinya ke log Vercel biar nggak nebak-nebak lagi
-    console.error("UPLOAD ERROR DETAILS:", error);
+    console.error("UPLOAD ERROR DETAILS:", error.message);
     return res.status(500).json({ error: error.message });
   }
 }
