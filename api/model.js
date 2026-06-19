@@ -1,17 +1,15 @@
-import { put } from '@vercel/blob';
 import { sql } from '@vercel/postgres';
 
 export default async function handler(req, res) {
-  // GET: Mengambil daftar model
+  // Hanya izinkan metode GET untuk mengambil data
   if (req.method === 'GET') {
-    const { rows } = await sql`SELECT * FROM models ORDER BY created_at DESC;`;
-    return res.status(200).json(rows);
+    try {
+      const { rows } = await sql`SELECT * FROM models ORDER BY created_at DESC;`;
+      return res.status(200).json(rows);
+    } catch (error) {
+      return res.status(500).json({ error: error.message });
+    }
   }
-
-  // POST: Menambah model baru
-  if (req.method === 'POST') {
-    const { name, url } = req.body;
-    await sql`INSERT INTO models (name, url) VALUES (${name}, ${url});`;
-    return res.status(200).json({ message: 'Success' });
-  }
+  
+  return res.status(405).json({ message: 'Method not allowed' });
 }
