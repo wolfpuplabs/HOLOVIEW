@@ -141,22 +141,25 @@
             width: fit-content;
         }
 
+        /* Pure Black Viewer Container dengan efek Spatial Radial Glow */
         #viewerContainer {
             width: 100%;
             height: 400px;
-            background: #020205;
+            background: radial-gradient(circle at center, rgba(59, 130, 246, 0.12) 0%, rgba(139, 92, 246, 0.04) 40%, #000000 80%);
             border-radius: 16px;
             margin-top: 24px;
             display: none;
             position: relative;
             border: 1px solid #18181b;
             overflow: hidden;
+            box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.9);
         }
 
+        /* Diubah ke transparent agar background gradient di container terlihat menembus */
         model-viewer {
             width: 100%;
             height: 100%;
-            background-color: #020205;
+            background-color: transparent;
         }
 
         .ar-fullscreen-overlay {
@@ -165,34 +168,8 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.2);
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            pointer-events: none; /* Supaya klik tidak terhalang ke model-viewer */
             z-index: 10;
-            transition: background 0.3s;
-        }
-
-        .ar-fullscreen-overlay:hover {
-            background: rgba(59, 130, 246, 0.15);
-        }
-
-        .ar-hint-banner {
-            background: rgba(11, 11, 15, 0.85);
-            border: 1px solid var(--border-glow);
-            padding: 12px 24px;
-            border-radius: 30px;
-            font-size: 14px;
-            font-weight: 600;
-            color: #ffffff;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-            letter-spacing: 0.5px;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-        
-        .ar-hint-banner:hover {
-            transform: scale(1.05);
         }
 
         /* Fullscreen Button Styles */
@@ -212,6 +189,7 @@
             cursor: pointer;
             box-shadow: 0 4px 15px rgba(0,0,0,0.5);
             transition: all 0.2s ease;
+            pointer-events: auto; /* Mengembalikan interaksi klik khusus tombol */
             z-index: 12;
         }
 
@@ -229,6 +207,7 @@
             border-radius: 0 !important;
             border: none !important;
             margin: 0 !important;
+            background: #000000 !important; /* Full black saat fullscreen penuh */
         }
 
         .modal-overlay {
@@ -336,429 +315,4 @@
         .card-footer {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            gap: 12px;
-            border-top: 1px solid #1a1a26;
-            padding-top: 16px;
-        }
-
-        .card-meta-info {
-            background: #06060a;
-            border: 1px solid #151522;
-            padding: 14px;
-            border-radius: 12px;
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
-
-        .meta-row {
-            font-size: 11px;
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
-        .meta-label { color: #4b5563; text-transform: uppercase; font-weight: 700; font-size: 9px; letter-spacing: 0.5px;}
-        .meta-value { color: #e4e4e7; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px;}
-
-        .card-qr-container {
-            width: 105px;
-            height: 105px;
-            background: #ffffff;
-            padding: 8px;
-            border-radius: 12px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
-            flex-shrink: 0;
-        }
-
-        .card-qr-container div {
-            width: 100%;
-            height: 100%;
-        }
-
-        .action-buttons-wrapper {
-            display: flex;
-            gap: 12px;
-            width: 100%;
-        }
-
-        .btn-modal {
-            padding: 14px 24px;
-            border-radius: 12px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            border: none;
-            flex: 1;
-            text-align: center;
-            transition: all 0.2s;
-        }
-
-        .btn-modal-save { 
-            background: #ffffff; 
-            color: #000000; 
-            box-shadow: 0 4px 15px rgba(255,255,255,0.2);
-        }
-        .btn-modal-save:hover { background: #e4e4e7; transform: translateY(-1px); }
-        .btn-modal-close { background: #18181b; color: #a1a1aa; border: 1px solid #27272a; }
-        .btn-modal-close:hover { background: #27272a; }
-    </style>
-</head>
-<body>
-
-    <div class="container">
-        <h1>HOLOVIEW Spatial Portal</h1>
-        <p id="engineSubtitle" class="subtitle">Ecosystem Engine active. Assets deployed onto cloud expire at midnight.</p>
-
-        <div id="setupFormArea">
-            <div class="upload-grid">
-                <div id="boxGlb" class="upload-box" onclick="document.getElementById('inputGlb').click()">
-                    <div class="box-title">Android / Web Engine</div>
-                    <div id="lblGlb" class="box-sub">Choose .glb file (Required)</div>
-                    <input type="file" id="inputGlb" accept=".glb">
-                </div>
-
-                <div id="boxUsdz" class="upload-box" onclick="document.getElementById('inputUsdz').click()">
-                    <div class="box-title">iOS AR Engine</div>
-                    <div id="lblUsdz" class="box-sub">Choose .usdz file (Optional)</div>
-                    <input type="file" id="inputUsdz" accept=".usdz">
-                </div>
-            </div>
-
-            <button id="uploadBtn" class="btn-spatial" disabled>Publish Manifest & Get Card</button>
-        </div>
-        
-        <p id="status"></p>
-        <div id="timerBadge">Expires In: <span id="countdown">--:--:--</span></div>
-
-        <div id="viewerContainer">
-            <div class="ar-fullscreen-overlay">
-                <div class="ar-hint-banner" onclick="triggerHardwareAR(); event.stopPropagation();">Tap to View in Spatial AR</div>
-                <button id="btnToggleFullscreen" class="btn-fullscreen" title="Toggle Fullscreen">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <div id="shareModal" class="modal-overlay">
-        <div class="modal-content">
-            <div id="arCard" class="ar-card-capture-area">
-                <div class="card-header">
-                    <div class="card-logo-box">
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
-                    </div>
-                    <div>
-                        <div class="card-title-main">HOLOVIEW</div>
-                        <div class="card-title-sub">SPATIAL AR PORTAL</div>
-                    </div>
-                </div>
-
-                <div class="card-preview-body">
-                    <img id="cardSnapshot" src="" alt="3D Spatial Frame">
-                </div>
-
-                <div class="card-footer">
-                    <div class="card-meta-info">
-                        <div class="meta-row"><span class="meta-label">Model Engine</span><span id="metaName" class="meta-value">Unknown</span></div>
-                        <div class="meta-row"><span class="meta-label">Allocation</span><span id="metaSize" class="meta-value">0.0 MB</span></div>
-                    </div>
-                    <div class="card-qr-container">
-                        <div id="qrcode"></div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="action-buttons-wrapper">
-                <button class="btn-modal btn-modal-close" onclick="closeModal()">Close</button>
-                <button class="btn-modal btn-modal-save" onclick="saveCardToPhotos()">Save to Photos</button>
-            </div>
-        </div>
-    </div>
-
-    <script>
-        const inputGlb = document.getElementById('inputGlb');
-        const inputUsdz = document.getElementById('inputUsdz');
-        const boxGlb = document.getElementById('boxGlb');
-        const boxUsdz = document.getElementById('boxUsdz');
-        const lblGlb = document.getElementById('lblGlb');
-        const lblUsdz = document.getElementById('lblUsdz');
-        const uploadBtn = document.getElementById('uploadBtn');
-        const status = document.getElementById('status');
-        const timerBadge = document.getElementById('timerBadge');
-        const countdown = document.getElementById('countdown');
-        const viewerContainer = document.getElementById('viewerContainer');
-        const btnToggleFullscreen = document.getElementById('btnToggleFullscreen');
-        const setupFormArea = document.getElementById('setupFormArea');
-        const engineSubtitle = document.getElementById('engineSubtitle');
-        
-        const shareModal = document.getElementById('shareModal');
-        const cardSnapshot = document.getElementById('cardSnapshot');
-        const metaName = document.getElementById('metaName');
-        const metaSize = document.getElementById('metaSize');
-        const qrcodeContainer = document.getElementById('qrcode');
-
-        const MAX_SIZE = 10 * 1024 * 1024; 
-        let localGlbUrl = "";
-        let localUsdzUrl = "";
-        let timerInterval = null;
-
-        inputGlb.addEventListener('change', () => {
-            if (inputGlb.files[0]?.size > MAX_SIZE) { alert("GLB file exceeds 10MB!"); inputGlb.value=""; return; }
-            if (inputGlb.files[0]) {
-                boxGlb.classList.add('has-file');
-                lblGlb.innerText = inputGlb.files[0].name;
-                if (localGlbUrl) URL.revokeObjectURL(localGlbUrl);
-                localGlbUrl = URL.createObjectURL(inputGlb.files[0]);
-                initEngineViewer(localGlbUrl, localUsdzUrl);
-                status.innerHTML = "<span style='color:#3b82f6;'>Local Engine Configured. Ready to Publish!</span>";
-            }
-            checkInputs();
-        });
-
-        inputUsdz.addEventListener('change', () => {
-            if (inputUsdz.files[0]?.size > MAX_SIZE) { alert("USDZ file exceeds 10MB!"); inputUsdz.value=""; return; }
-            if (inputUsdz.files[0]) {
-                boxUsdz.classList.add('has-file');
-                lblUsdz.innerText = inputUsdz.files[0].name;
-                if (localUsdzUrl) URL.revokeObjectURL(localUsdzUrl);
-                localUsdzUrl = URL.createObjectURL(inputUsdz.files[0]);
-                if (localGlbUrl) initEngineViewer(localGlbUrl, localUsdzUrl);
-            }
-            checkInputs();
-        });
-
-        function checkInputs() {
-            uploadBtn.disabled = !inputGlb.files[0];
-        }
-
-        window.addEventListener('DOMContentLoaded', () => {
-            const params = new URLSearchParams(window.location.search);
-            const modelParam = params.get('glb');
-            const iosParam = params.get('usdz');
-            if (modelParam) {
-                setupFormArea.style.display = 'none';
-                engineSubtitle.innerText = "Spatial Link active. Immersive hardware portal initialized below.";
-                initEngineViewer(modelParam, iosParam);
-                startDestructionTimer();
-            }
-        });
-
-        uploadBtn.addEventListener('click', async () => {
-            if (!inputGlb.files[0]) return;
-            uploadBtn.disabled = true;
-            status.innerHTML = "Deploying Spatial Mesh onto Node Infrastructure...";
-
-            try {
-                const resGlb = await fetch(`/api/upload?filename=${encodeURIComponent(inputGlb.files[0].name)}`, {
-                    method: 'POST', body: inputGlb.files[0]
-                });
-                if (!resGlb.ok) throw new Error("GLB synchronization pipeline failure.");
-                const dataGlb = await resGlb.json();
-
-                let cloudUsdzUrl = "";
-                if (inputUsdz.files[0]) {
-                    status.innerHTML = "Mapping fallback Apple Quick Look asset...";
-                    const resUsdz = await fetch(`/api/upload?filename=${encodeURIComponent(inputUsdz.files[0].name)}`, {
-                        method: 'POST', body: inputUsdz.files[0]
-                    });
-                    if (!resUsdz.ok) throw new Error("USDZ asset deployment failure.");
-                    const dataUsdz = await resUsdz.json();
-                    cloudUsdzUrl = dataUsdz.url;
-                }
-
-                status.innerHTML = "<span style='color:#10b981;'>Published successfully! Shared link generated.</span>";
-                
-                let shareLink = `${window.location.origin}${window.location.pathname}?glb=${encodeURIComponent(dataGlb.url)}`;
-                if(cloudUsdzUrl) shareLink += `&usdz=${encodeURIComponent(cloudUsdzUrl)}`;
-
-                const trackedName = inputGlb.files[0].name;
-                const trackedSize = inputGlb.files[0].size;
-
-                if (localGlbUrl) { URL.revokeObjectURL(localGlbUrl); localGlbUrl = ""; }
-                if (localUsdzUrl) { URL.revokeObjectURL(localUsdzUrl); localUsdzUrl = ""; }
-
-                initEngineViewer(dataGlb.url, cloudUsdzUrl);
-                startDestructionTimer();
-                
-                triggerShareCard(shareLink, trackedName, trackedSize);
-
-            } catch (err) {
-                status.innerHTML = `<span style='color:#ef4444;'>Pipeline Exception: ${err.message}</span>`;
-                uploadBtn.disabled = false;
-            }
-        });
-
-        function initEngineViewer(glbUrl, usdzUrl) {
-            viewerContainer.style.display = 'block';
-            
-            const oldViewer = viewerContainer.querySelector('model-viewer');
-            if (oldViewer) oldViewer.remove();
-
-            const viewer = document.createElement('model-viewer');
-            viewer.setAttribute('id', 'spatialEngineInstance');
-            viewer.setAttribute('src', glbUrl);
-            viewer.setAttribute('ar', '');
-            viewer.setAttribute('ar-modes', 'webxr scene-viewer quick-look');
-            viewer.setAttribute('camera-controls', '');
-            viewer.setAttribute('auto-rotate', '');
-            viewer.setAttribute('shadow-intensity', '1');
-            viewer.setAttribute('preserve-drawing-buffer', 'true'); 
-            viewer.setAttribute('crossorigin', 'anonymous');
-
-            viewer.style.width = '100%';
-            viewer.style.height = '100%';
-
-            viewer.addEventListener('load', () => {
-                setTimeout(() => {
-                    const anims = viewer.availableAnimations;
-                    if (anims && anims.length > 0) {
-                        viewer.setAttribute('animation-name', anims[0]);
-                        viewer.play();
-                    }
-                }, 100);
-            });
-
-            if (usdzUrl && usdzUrl !== "null" && usdzUrl !== "") {
-                viewer.setAttribute('ios-src', usdzUrl);
-            }
-
-            viewerContainer.prepend(viewer);
-        }
-
-        // Fullscreen Toggle Logic
-        btnToggleFullscreen.addEventListener('click', (e) => {
-            e.stopPropagation(); 
-            if (!document.fullscreenElement) {
-                viewerContainer.requestFullscreen().catch(err => {
-                    console.error(`Error going fullscreen: ${err.message}`);
-                });
-            } else {
-                document.exitFullscreen();
-            }
-        });
-
-        document.addEventListener('fullscreenchange', () => {
-            if (document.fullscreenElement === viewerContainer) {
-                // Change icon to minimize
-                btnToggleFullscreen.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14h6v6m10-6h-6v6M4 10h6V4m10 6h-6V4"></path></svg>`;
-            } else {
-                // Change icon to maximize
-                btnToggleFullscreen.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"></path></svg>`;
-            }
-        });
-
-        function triggerShareCard(url, filename, sizeInBytes) {
-            const displaySize = (sizeInBytes / (1024 * 1024)).toFixed(1) + " MB";
-            const displayName = filename.replace(/\.[^/.]+$/, "");
-            
-            metaName.innerText = displayName;
-            metaSize.innerText = displaySize;
-
-            qrcodeContainer.innerHTML = "";
-            new QRCode(qrcodeContainer, {
-                text: url,
-                width: 89,
-                height: 89,
-                colorDark : "#000000",
-                colorLight : "#ffffff",
-                correctLevel : QRCode.CorrectLevel.M 
-            });
-
-            const viewer = document.getElementById('spatialEngineInstance');
-            if(viewer) {
-                if (viewer.loaded) {
-                    captureModelSnapshot(viewer);
-                } else {
-                    viewer.addEventListener('load', () => captureModelSnapshot(viewer), { once: true });
-                }
-            } else {
-                shareModal.classList.add('active');
-            }
-        }
-
-        function captureModelSnapshot(viewer) {
-            requestAnimationFrame(() => {
-                setTimeout(() => {
-                    viewer.toBlob({ idealAspect: false }).then((blob) => {
-                        const reader = new FileReader();
-                        reader.onloadend = function() {
-                            cardSnapshot.src = reader.result;
-                            shareModal.classList.add('active');
-                        }
-                        reader.readAsDataURL(blob);
-                    }).catch((e) => {
-                        console.error("Snapshot generation halted: ", e);
-                        shareModal.classList.add('active');
-                    });
-                }, 500); 
-            });
-        }
-
-        function closeModal() {
-            shareModal.classList.remove('active');
-            uploadBtn.disabled = (inputGlb.files.length === 0);
-        }
-
-        function saveCardToPhotos() {
-            const cardElement = document.getElementById('arCard');
-            status.innerHTML = "Compiling matrix screenshot elements...";
-            
-            html2canvas(cardElement, {
-                useCORS: true,
-                allowTaint: false,
-                backgroundColor: "#0b0b11",
-                scale: 3
-            }).then(canvas => {
-                const image = canvas.toDataURL("image/png");
-                const link = document.createElement('a');
-                link.download = `HOLOVIEW_${metaName.innerText || 'Asset'}.png`;
-                link.href = image;
-                link.click();
-                status.innerHTML = "<span style='color:#10b981;'>HOLOVIEW card exported successfully!</span>";
-            }).catch(err => {
-                alert("Vector matrix generation failed: " + err.message);
-            });
-        }
-
-        function startDestructionTimer() {
-            if (timerInterval) clearInterval(timerInterval);
-            timerBadge.style.display = 'block';
-            
-            const updateCountdown = () => {
-                const now = new Date();
-                const tomorrow = new Date();
-                tomorrow.setHours(24, 0, 0, 0);
-                const diff = tomorrow - now;
-                
-                if (diff <= 0) {
-                    countdown.innerText = "00:00:00";
-                    clearInterval(timerInterval);
-                    location.reload();
-                    return;
-                }
-                
-                const hours = String(Math.floor((diff / (1000 * 60 * 60)) % 24)).padStart(2, '0');
-                const minutes = String(Math.floor((diff / (1000 * 60)) % 60)).padStart(2, '0');
-                const seconds = String(Math.floor((diff / 1000) % 60)).padStart(2, '0');
-
-                countdown.innerText = `${hours}:${minutes}:${seconds}`;
-            };
-
-            updateCountdown();
-            timerInterval = setInterval(updateCountdown, 1000);
-        }
-
-        function triggerHardwareAR() {
-            const viewer = document.getElementById('spatialEngineInstance');
-            if (viewer) {
-                viewer.activateAR();
-            }
-        }
-    </script>
-</body>
-</html>
+            align-items: center
