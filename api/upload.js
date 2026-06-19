@@ -1,35 +1,54 @@
-export default async function handler(request, response) {
-  if (request.method !== 'POST') {
-    return response.status(405).json({ error: 'Method not allowed' });
+export const config = {
+  api: { bodyParser: false }, // Wajib false agar file biner 3D tidak korup
+};
+
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    // Membaca nama file yang dikirim dari browser header
-    const filename = request.headers['x-filename'] || `${Date.now()}_model.glb`;
-
-    // Berkomunikasi dengan REST Vercel Blob untuk meminta Presigned Upload URL
-    const vercelResponse = await fetch(`https://blob.vercel-storage.com/${filename}`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${process.env.BLOB_READ_WRITE_TOKEN}`,
-        'x-api-version': '1',
-        'x-add-random-suffix': 'true' // Menghindari duplikasi nama file antar user
-      }
-    });
-
-    if (!vercelResponse.ok) {
-      const errText = await vercelResponse.text();
-      throw new Error(`Vercel Storage Refused: ${errText}`);
+    // 1. Ambil token aman dari environment Vercel
+    const token = process.env.BLOB_READ_WRITE_TOKEN;
+    if (!token) {
+      throw new Error("Sistem Gagal: BLOB_READ_WRITE_TOKEN tidak ditemukan di Vercel Dashboard.");
     }
 
-    const data = await vercelResponse.json();
-    
-    // Kirim Presigned URL ke browser client
-    return response.status(200).json({
-      uploadUrl: data.url,
-      publicUrl: data.url.split('?')[0] // URL bersih tanpa query string
+    // 2. Ambil dan bersihkan nama file
+    let filename = req.headers['x-filename'] || 'model.glb';
+    filename = decodeURIComponent(filename).replace(/[^a-zA-Z0-9.-]/g, '_');
+    filename = `${Date.now()}_${filename}`;
+
+    // 3. Kumpulkan pecahan file dari frontend ke dalam RAM (Buffer)
+    const chunks = [];
+    for await (const chunk of req) {
+      chunks.push(chunk);
+    }
+    const fileBuffer = Buffer.concat(chunks);
+
+    // 4. Tembak langsung ke REST API Vercel Blob tanpa module tambahan
+    const vercelRes = await fetch(`https://blob.vercel-storage.com/${filename}`, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'x-api-version': '7',
+        'Content-Type': 'application/octet-stream',
+      },
+      body: fileBuffer
     });
+
+    if (!vercelRes.ok) {
+      const errText = await vercelRes.text();
+      throw new Error(`Vercel Blob Menolak: ${errText}`);
+    }
+
+    const data = await vercelRes.json();
+    
+    // 5. Kembalikan URL publik ke browser
+    return res.status(200).json({ url: data.url });
+
   } catch (error) {
-    return response.status(500).json({ error: error.message });
+    console.error("Upload API Error:", error);
+    return res.status(500).json({ error: error.message });
   }
 }
