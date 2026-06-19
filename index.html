@@ -136,7 +136,7 @@
             top: 50%; left: 50%;
             width: 250px; height: 250px;
             background: radial-gradient(circle, rgba(79, 172, 254, 0.08) 0%, transparent 70%);
-            transform: translate(-50%, -50%) scale(0.8);
+            transform: translate(-50%, -50%) scale(0.85);
             animation: spatialPulse 4s ease-in-out infinite alternate;
             z-index: 0;
             pointer-events: none;
@@ -233,7 +233,7 @@
     <div class="container">
         <div style="margin-bottom: 24px;">
             <h1 style="font-size: 22px; font-weight: 700; letter-spacing: -0.2px;">HOLOVIEW</h1>
-            <div style="color: var(--text-muted); font-size: 12px; margin-top: 2px;">Ecosystem Engine active. Secure Server-Side Sync.</div>
+            <div style="color: var(--text-muted); font-size: 12px; margin-top: 2px;">Ecosystem Engine active. Direct Cloud Streaming.</div>
         </div>
         
         <div class="upload-grid">
@@ -321,7 +321,7 @@
         let glbPublicUrl = "";
         let usdzPublicUrl = "";
 
-        // PEMBACA PARAMETER LINK KETIKA USER MEMBUKA QR CODE
+        // PEMBACA URL UNTUK STRATEGI SYNC USER LAIN
         window.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             const modelUrl = urlParams.get('model');
@@ -348,27 +348,33 @@
             }
         });
 
-        // AMAN: PANGGILAN API ROUTE SECARA INTERNAL KE VERCEL BACKEND
-        async function uploadSecureAsset(file) {
-            const response = await fetch('/api/upload', {
-                method: "POST",
-                headers: { "X-Filename": file.name },
+        // ALUR SIGNED URL COMBINATION: MINTA LINK RAMPASAN BACKEND -> STREAM LANGSUNG DARI BROWSER (ANTI TIMEOUT)
+        async function streamUploadToVercelBlob(file) {
+            // 1. Ambil authorization upload token presigned dari backend API internal
+            const authResponse = await fetch('/api/upload', {
+                method: 'POST',
+                headers: { 'X-Filename': file.name }
+            });
+
+            if (!authResponse.ok) throw new Error("Gagal mengamankan token otorisasi Vercel Blob.");
+            const { uploadUrl, publicUrl } = await authResponse.json();
+
+            // 2. Kirim data biner file utuh secara terpisah (menghindari payload limit API gateway Vercel)
+            const pushResponse = await fetch(uploadUrl, {
+                method: 'PUT',
                 body: file
             });
 
-            if (!response.ok) {
-                throw new Error("Gagal mengunggah file ke Vercel Blob via Secure API.");
-            }
+            if (!pushResponse.ok) throw new Error("Gagal mengalirkan data biner objek langsung ke Vercel Storage.");
 
-            const data = await response.json();
-            return data.url; 
+            return publicUrl;
         }
 
         glbInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if(file) {
                 try {
-                    statusText.innerText = "Processing & Deploying GLB to Cloud Storage...";
+                    statusText.innerText = "Streaming GLB Asset to Vercel Storage (Direct CDN Bypass)...";
                     statusText.style.color = "#4facfe";
                     renderBtn.setAttribute('disabled', 'true');
 
@@ -377,7 +383,7 @@
                     document.getElementById('glbName').innerText = file.name;
                     document.getElementById('glbBox').classList.add('has-file');
 
-                    glbPublicUrl = await uploadSecureAsset(file);
+                    glbPublicUrl = await streamUploadToVercelBlob(file);
                     
                     modelViewer.src = glbPublicUrl;
                     viewerContainer.style.display = 'block';
@@ -397,13 +403,13 @@
             const file = e.target.files[0];
             if(file) {
                 try {
-                    statusText.innerText = "Deploying iOS Asset...";
+                    statusText.innerText = "Streaming iOS USDZ Asset...";
                     statusText.style.color = "#4facfe";
                     
                     document.getElementById('usdzName').innerText = file.name;
                     document.getElementById('usdzBox').classList.add('has-file');
 
-                    usdzPublicUrl = await uploadSecureAsset(file);
+                    usdzPublicUrl = await streamUploadToVercelBlob(file);
                     modelViewer.setAttribute('ios-src', usdzPublicUrl);
 
                     statusText.innerText = "iOS Engine Pipeline Synchronized!";
@@ -429,7 +435,6 @@
             }
 
             const baseUrl = window.location.origin + window.location.pathname;
-            
             shareableConstructedUrl = `${baseUrl}?model=${encodeURIComponent(glbPublicUrl)}&name=${encodeURIComponent(currentFileName)}&size=${encodeURIComponent(currentFileSize)}`;
             if(usdzPublicUrl) {
                 shareableConstructedUrl += `&ios=${encodeURIComponent(usdzPublicUrl)}`;
