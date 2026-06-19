@@ -3,318 +3,238 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D AR Asset Library & Temporary Share</title>
+    <title>3D Spatial AR Portal</title>
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
     <style>
         :root {
-            --bg-color: #121214;
-            --card-bg: #1a1a1e;
-            --accent-color: #3b82f6;
-            --accent-hover: #2563eb;
-            --text-main: #ffffff;
-            --text-muted: #a1a1aa;
-            --error-color: #ef4444;
+            --bg-pure-black: #000000;
+            --card-dark: #0a0a0c;
+            --border-glow: #1e1e24;
+            --accent-spatial: #3b82f6;
+            --accent-glow: rgba(59, 130, 246, 0.25);
+            --text-main: #f4f4f5;
+            --text-muted: #71717a;
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
         }
 
         body {
-            background-color: var(--bg-color);
+            background-color: var(--bg-pure-black);
             color: var(--text-main);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
             min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
             padding: 20px;
+            overflow-x: hidden;
+        }
+
+        /* Spatial Fog Vibe Background Effect */
+        body::before {
+            content: '';
+            position: absolute;
+            width: 400px;
+            height: 400px;
+            background: radial-gradient(circle, var(--accent-glow) 0%, rgba(0,0,0,0) 70%);
+            top: 15%;
+            left: 20%;
+            z-index: 0;
+            pointer-events: none;
+        }
+        body::after {
+            content: '';
+            position: absolute;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(168, 85, 247, 0.1) 0%, rgba(0,0,0,0) 70%);
+            bottom: 10%;
+            right: 15%;
+            z-index: 0;
+            pointer-events: none;
         }
 
         .container {
             width: 100%;
-            max-width: 600px;
-            background: var(--card-bg);
+            max-width: 650px;
+            background: rgba(10, 10, 12, 0.8);
+            backdrop-filter: blur(20px);
             padding: 30px;
-            border-radius: 16px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-            text-align: center;
-            margin-top: 40px;
+            border-radius: 24px;
+            border: 1px solid var(--border-glow);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.7);
+            z-index: 1;
+            position: relative;
         }
 
         h1 {
-            font-size: 24px;
-            margin-bottom: 8px;
+            font-size: 26px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            margin-bottom: 6px;
+            background: linear-gradient(to right, #fff, var(--text-muted));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
         .subtitle {
             color: var(--text-muted);
-            font-size: 14px;
+            font-size: 13px;
             margin-bottom: 24px;
         }
 
-        .upload-area {
-            border: 2px dashed #3f3f46;
-            padding: 40px 20px;
-            border-radius: 12px;
+        /* Dual Grid Upload Box */
+        .upload-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .upload-box {
+            border: 1px dashed #27272a;
+            padding: 24px 16px;
+            border-radius: 14px;
             cursor: pointer;
-            transition: border-color 0.2s;
-            background: #1f1f23;
+            background: #050507;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-align: center;
         }
 
-        .upload-area:hover {
-            border-color: var(--accent-color);
+        .upload-box:hover {
+            border-color: var(--accent-spatial);
+            box-shadow: 0 0 15px var(--accent-glow);
         }
 
-        #fileInput {
-            display: none;
+        .upload-box.has-file {
+            border-style: solid;
+            border-color: #10b981;
+            background: rgba(16, 185, 129, 0.03);
         }
 
-        .upload-icon {
-            font-size: 40px;
-            margin-bottom: 12px;
-            display: inline-block;
-        }
+        .upload-box input { display: none; }
+        .box-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+        .box-sub { font-size: 11px; color: var(--text-muted); }
 
-        .btn {
-            background: var(--accent-color);
-            color: white;
+        .btn-spatial {
+            background: var(--text-main);
+            color: var(--bg-pure-black);
             border: none;
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-size: 16px;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 15px;
             font-weight: 600;
             cursor: pointer;
             width: 100%;
-            margin-top: 20px;
-            transition: background 0.2s;
+            transition: all 0.2s;
         }
 
-        .btn:hover {
-            background: var(--accent-hover);
+        .btn-spatial:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 15px rgba(255,255,255,0.1);
         }
 
-        .btn:disabled {
-            background: #3f3f46;
-            color: var(--text-muted);
+        .btn-spatial:disabled {
+            background: #18181b;
+            color: #52525b;
             cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
         }
 
-        #statusMessage {
-            margin-top: 16px;
-            font-size: 14px;
-            font-weight: 500;
-        }
+        #status { font-size: 13px; margin-top: 14px; font-weight: 500; }
 
-        .error { color: var(--error-color); }
-        .success { color: #10b981; }
-
-        #shareContainer {
-            margin-top: 24px;
-            display: none;
-            text-align: left;
-        }
-
-        .share-box {
-            background: #27272a;
-            padding: 12px;
-            border-radius: 8px;
+        /* Share Link Component */
+        #shareSection { margin-top: 24px; display: none; }
+        .share-wrapper {
+            background: #09090b;
+            border: 1px solid #18181b;
+            padding: 10px 14px;
+            border-radius: 10px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-top: 8px;
+            margin-top: 6px;
         }
+        .share-text { font-size: 13px; color: var(--accent-spatial); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 85%; }
+        .btn-copy { background: #18181b; color: white; border: 1px solid #27272a; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; }
 
-        .share-url {
-            font-size: 13px;
-            color: #3b82f6;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            width: 80%;
-        }
-
-        .copy-btn {
-            background: #3f3f46;
-            border: none;
-            color: white;
-            padding: 6px 12px;
-            border-radius: 4px;
+        /* Timer Badge */
+        #timerBadge {
+            display: none;
+            margin: 16px auto 0 auto;
+            background: rgba(239, 68, 110, 0.1);
+            color: #f43f5e;
+            border: 1px solid rgba(239, 68, 110, 0.2);
+            padding: 6px 14px;
+            border-radius: 20px;
             font-size: 12px;
-            cursor: pointer;
+            font-weight: 600;
+            width: fit-content;
         }
 
-        /* 3D View Styling */
+        /* Pure Black Spatial Fullscreen Viewer Container */
         #viewerContainer {
             width: 100%;
             height: 400px;
-            background: #000;
-            border-radius: 12px;
+            background: #000000;
+            border-radius: 16px;
             margin-top: 24px;
             display: none;
             position: relative;
+            border: 1px solid #141416;
+            overflow: hidden;
         }
 
         model-viewer {
             width: 100%;
             height: 100%;
-            background-color: #1f1f23;
-            border-radius: 12px;
+            background-color: #000000;
+            --poster-color: transparent;
         }
+
+        /* Fullscreen Native Trigger Control */
+        .fullscreen-toggle {
+            position: absolute;
+            bottom: 16px;
+            left: 16px;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            cursor: pointer;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        /* Ketika container masuk mode fullscreen API native */
+        #viewerContainer:fullscreen { border-radius: 0; width: 100vw; height: 100vh; margin-top: 0; }
+        #viewerContainer:fullscreen .fullscreen-toggle { bottom: 24px; left: 24px; }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h1>3D AR Portal</h1>
-        <p class="subtitle">Upload file .glb atau .usdz (Maks 10MB). File otomatis terhapus dalam 24 jam.</p>
+        <h1>3D Spatial AR Portal</h1>
+        <p class="subtitle">Dual Engine Uploader (Maks 10MB/file). File hancur otomatis malam ini.</p>
 
-        <div class="upload-area" onclick="document.getElementById('fileInput').click()">
-            <span class="upload-icon">📦</span>
-            <p id="uploadPrompt">Klik untuk memilih file 3D</p>
-            <span style="font-size: 12px; color: var(--text-muted);">Format: .glb, .usdz</span>
-            <input type="file" id="fileInput" accept=".glb,.usdz">
-        </div>
-
-        <button id="uploadBtn" class="btn" disabled>Upload & Generate Link</button>
-        <p id="statusMessage"></p>
-
-        <div id="shareContainer">
-            <label style="font-size: 14px; color: var(--text-muted);">Link Share AR lu:</label>
-            <div class="share-box">
-                <span id="shareUrl" class="share-url"></span>
-                <button class="copy-btn" onclick="copyLink()">Copy</button>
+        <div class="upload-grid">
+            <div id="boxGlb" class="upload-box" onclick="document.getElementById('inputGlb').click()">
+                <div class="box-title">🤖 Android / Web Engine</div>
+                <div id="lblGlb" class="box-sub">Pilih file .glb (Wajib)</div>
+                <input type="file" id="inputGlb" accept=".glb">
             </div>
-        </div>
 
-        <div id="viewerContainer">
-            </div>
-    </div>
-
-    <script>
-        const fileInput = document.getElementById('fileInput');
-        const uploadBtn = document.getElementById('uploadBtn');
-        const uploadPrompt = document.getElementById('uploadPrompt');
-        const statusMessage = document.getElementById('statusMessage');
-        const shareContainer = document.getElementById('shareContainer');
-        const shareUrl = document.getElementById('shareUrl');
-        const viewerContainer = document.getElementById('viewerContainer');
-
-        const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10 Megabytes
-
-        // Jalankan logic jika user membuka link share langsung via parameter URL (?model=...)
-        window.addEventListener('DOMContentLoaded', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const modelUrl = urlParams.get('model');
-            const filename = urlParams.get('file') || 'model.glb';
-            if (modelUrl) {
-                initModelViewer(modelUrl, filename);
-            }
-        });
-
-        fileInput.addEventListener('change', () => {
-            const file = fileInput.files[0];
-            if (!file) return;
-
-            // PROTEKSI MAKSIMAL 10MB
-            if (file.size > MAX_FILE_SIZE) {
-                statusMessage.className = 'error';
-                statusMessage.innerText = 'Gagal: Ukuran file melebihi 10MB!';
-                fileInput.value = '';
-                uploadBtn.disabled = true;
-                uploadPrompt.innerText = 'Klik untuk memilih file 3D';
-                return;
-            }
-
-            uploadPrompt.innerText = `Terpilih: ${file.name} (${(file.size / (1024 * 1024)).toFixed(2)} MB)`;
-            statusMessage.innerText = '';
-            uploadBtn.disabled = false;
-        });
-
-        uploadBtn.addEventListener('click', async () => {
-            const file = fileInput.files[0];
-            if (!file) return;
-
-            uploadBtn.disabled = true;
-            statusMessage.className = '';
-            statusMessage.innerText = 'Sedang mengupload file ke Cloud...';
-
-            try {
-                // Upload file mentah lewat API backend kita
-                const response = await fetch(`/api/upload?filename=${encodeURIComponent(file.name)}`, {
-                    method: 'POST',
-                    body: file,
-                    headers: {
-                        'Content-Type': 'application/octet-stream'
-                    }
-                });
-
-                if (!response.ok) {
-                    const errData = await response.json();
-                    throw new Error(errData.error || 'Gagal upload file.');
-                }
-
-                const data = await response.json(); // Mengambil data blob.url
-                
-                statusMessage.className = 'success';
-                statusMessage.innerText = 'Upload Berhasil!';
-
-                // Bikin Link Kombinasi buat di-share
-                const generatedLink = `${window.location.origin}${window.location.pathname}?model=${encodeURIComponent(data.url)}&file=${encodeURIComponent(file.name)}`;
-                shareUrl.innerText = generatedLink;
-                shareContainer.style.display = 'block';
-
-                // Tampilkan preview 3D interaktif langsung di bawahnya
-                initModelViewer(data.url, file.name);
-
-            } catch (error) {
-                statusMessage.className = 'error';
-                statusMessage.innerText = `Error: ${error.message}`;
-                uploadBtn.disabled = false;
-            }
-        });
-
-        function initModelViewer(modelUrl, filename) {
-            viewerContainer.innerHTML = '';
-            viewerContainer.style.display = 'block';
-
-            // Build Model Viewer Element secara dinamis
-            const viewer = document.createElement('model-viewer');
-            viewer.setAttribute('src', modelUrl);
-            viewer.setAttribute('alt', 'Dynamic 3D AR Model');
-            viewer.setAttribute('ar', '');
-            viewer.setAttribute('ar-modes', 'webxr scene-viewer quick-look');
-            viewer.setAttribute('camera-controls', '');
-            viewer.setAttribute('auto-rotate', '');
-            viewer.setAttribute('shadow-intensity', '1');
-            
-            // Atribut wajib autoplay
-            viewer.setAttribute('autoplay', '');
-
-            // JURUS ANTI-DIEM: Paksa ambil animasi bawaan pas modelnya kelar ke-load
-            viewer.addEventListener('load', () => {
-                const availableAnimations = viewer.availableAnimations;
-                if (availableAnimations && availableAnimations.length > 0) {
-                    // Tembak nama animasi pertama yang tersimpan di file .glb/.usdz
-                    viewer.animationName = availableAnimations[0];
-                    viewer.play();
-                }
-            });
-
-            // Handler Khusus Ekstensi USDZ Apple Quick Look iOS
-            if (filename.toLowerCase().endsWith('.usdz')) {
-                viewer.setAttribute('ios-src', modelUrl);
-            }
-
-            viewerContainer.appendChild(viewer);
-        }
-
-        function copyLink() {
-            navigator.clipboard.writeText(shareUrl.innerText);
-            alert('Link berhasil disalin, bang!');
-        }
-    </script>
-</body>
-</html>
+            <div id="boxUsdz" class="upload-box" onclick="document.getElementById('inputUsdz').click()">
+                <div class="box-title">🍏 iOS AR Engine</div>
+                <div id="lblUsdz" class="box-sub">Pilih file .usdz (Opsional)</div>
+                <input type="file" id="inputUsdz" accept=".us
