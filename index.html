@@ -258,9 +258,10 @@
         const countdown = document.getElementById('countdown');
         const viewerContainer = document.getElementById('viewerContainer');
 
-        const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+        const MAX_SIZE = 10 * 1024 * 1024; // Limitasi ukuran file: 10MB
         let localGlbUrl = "";
         let localUsdzUrl = "";
+        let timerInterval = null;
 
         // INSTAN PREVIEW SAAT FILE GLB DIPILIH
         inputGlb.addEventListener('change', () => {
@@ -269,18 +270,18 @@
                 boxGlb.classList.add('has-file');
                 lblGlb.innerText = inputGlb.files[0].name;
                 
-                // Bikin Link Lokal Sementara
+                // Bersihkan Object URL lama agar tidak boros RAM browser
                 if (localGlbUrl) URL.revokeObjectURL(localGlbUrl);
                 localGlbUrl = URL.createObjectURL(inputGlb.files[0]);
                 
-                // Panggil Viewer Langsung pake file lokal!
+                // Jalankan Engine Viewer lokal secara instan
                 initEngineViewer(localGlbUrl, localUsdzUrl);
                 status.innerHTML = "<span style='color:#3b82f6;'>Local Preview Aktif. Siap di-view/di-AR!</span>";
             }
             checkInputs();
         });
 
-        // INSTAN PREVIEW UNTUK USDZ (iOS QUICK LOOK LOKAL)
+        // INSTAN PREVIEW UNTUK USDZ (iOS QUICK LOOK)
         inputUsdz.addEventListener('change', () => {
             if (inputUsdz.files[0]?.size > MAX_SIZE) { alert("File USDZ lebih dari 10MB!"); inputUsdz.value=""; return; }
             if (inputUsdz.files[0]) {
@@ -301,7 +302,7 @@
             uploadBtn.disabled = !inputGlb.files[0];
         }
 
-        // Handle link share cloud dari URL (?glb=...&usdz=...)
+        // Tangani Link Cloud dari URL Parameter saat load (?glb=...&usdz=...)
         window.addEventListener('DOMContentLoaded', () => {
             const params = new URLSearchParams(window.location.search);
             const modelParam = params.get('glb');
@@ -312,20 +313,20 @@
             }
         });
 
-        // TOMBOL UPLOAD DIUBAH MENJADI TOMBOL PUBLISH/SHARE KE CLOUD
+        // PROSES UPLOAD/PUBLISH KE CLOUD VERCEL API
         uploadBtn.addEventListener('click', async () => {
             uploadBtn.disabled = true;
             status.innerHTML = "Mengirim Manifest Permanen ke Cloud Vercel...";
 
             try {
-                // 1. Upload GLB
+                // 1. Upload file GLB utama
                 const resGlb = await fetch(`/api/upload?filename=${encodeURIComponent(inputGlb.files[0].name)}`, {
                     method: 'POST', body: inputGlb.files[0]
                 });
                 if (!resGlb.ok) throw new Error("Gagal mengunggah file GLB");
                 const dataGlb = await resGlb.json();
 
-                // 2. Upload USDZ jika ada
+                // 2. Upload file USDZ jika dilampirkan
                 let cloudUsdzUrl = "";
                 if (inputUsdz.files[0]) {
                     status.innerHTML = "Menyinkronkan iOS Engine ke Cloud...";
@@ -337,7 +338,7 @@
                     cloudUsdzUrl = dataUsdz.url;
                 }
 
-                status.innerHTML = "<span style='color:#10b981;'>Published! File tersimpan di Cloud selama 24 jam.</span>";
+                status.innerHTML = "<span style='color:#10b981;'>Published! File tersimpan di Cloud sampai tengah malam.</span>";
                 
                 let shareLink = `${window.location.origin}${window.location.pathname}?glb=${encodeURIComponent(dataGlb.url)}`;
                 if(cloudUsdzUrl) shareLink += `&usdz=${encodeURIComponent(cloudUsdzUrl)}`;
@@ -345,7 +346,11 @@
                 shareUrl.innerText = shareLink;
                 shareSection.style.display = 'block';
 
-                // Ganti engine viewer ke link cloud resminya
+                // Hapus alokasi Object URL lokal karena asset sudah bergeser menggunakan cloud URL
+                if (localGlbUrl) { URL.revokeObjectURL(localGlbUrl); localGlbUrl = ""; }
+                if (localUsdzUrl) { URL.revokeObjectURL(localUsdzUrl); localUsdzUrl = ""; }
+
+                // Inisialisasi ulang menggunakan link resmi cloud
                 initEngineViewer(dataGlb.url, cloudUsdzUrl);
                 startDestructionTimer();
 
@@ -355,8 +360,11 @@
             }
         });
 
+        // BUILD DYNAMIC COMPONENT UNTUK MODEL VIEWER
         function initEngineViewer(glbUrl, usdzUrl) {
             viewerContainer.style.display = 'block';
+            
+            // Hapus instansi model lama agar tidak terjadi memory leak dan conflict DOM
             const oldViewer = viewerContainer.querySelector('model-viewer');
             if (oldViewer) oldViewer.remove();
 
@@ -369,37 +377,56 @@
             viewer.setAttribute('shadow-intensity', '1');
             viewer.setAttribute('autoplay', '');
 
+            // Solusi Perbaikan Bug Animasi: Memastikan animasi terdeteksi sempurna setelah asset ter-load
             viewer.addEventListener('load', () => {
-                const anims = viewer.availableAnimations;
-                if (anims && anims.length > 0) {
-                    viewer.animationName = anims[0];
-                    viewer.play();
-                }
+                setTimeout(() => {
+                    const anims = viewer.availableAnimations;
+                    if (anims && anims.length > 0) {
+                        viewer.setAttribute('animation-name', anims[0]);
+                        viewer.play();
+                    }
+                }, 100);
             });
 
             if (usdzUrl && usdzUrl !== "null" && usdzUrl !== "") {
                 viewer.setAttribute('ios-src', usdzUrl);
             }
 
-            viewerContainer.appendChild(viewer);
+            // Gunakan prepend agar model viewer berada di belakang/bawah tombol fullscreen toggle
+            viewerContainer.prepend(viewer);
         }
 
+        // TIMER PENGHANCURAN OTOMATIS (COUNTDOWN HINGGA TENGAH MALAM)
         function startDestructionTimer() {
+            if (timerInterval) clearInterval(timerInterval); // Bersihkan interval yang aktif sebelumnya
+            
             timerBadge.style.display = 'block';
-            setInterval(() => {
+            
+            const updateCountdown = () => {
                 const now = new Date();
                 const tomorrow = new Date();
-                tomorrow.setHours(24, 0, 0, 0);
+                tomorrow.setHours(24, 0, 0, 0); // Target ke jam 00:00:00 malam ini
                 const diff = tomorrow - now;
+                
+                if (diff <= 0) {
+                    countdown.innerText = "00:00:00";
+                    clearInterval(timerInterval);
+                    location.reload(); // Refresh halaman saat siklus waktu habis
+                    return;
+                }
                 
                 const hours = String(Math.floor((diff / (1000 * 60 * 60)) % 24)).padStart(2, '0');
                 const minutes = String(Math.floor((diff / (1000 * 60)) % 60)).padStart(2, '0');
                 const seconds = String(Math.floor((diff / 1000) % 60)).padStart(2, '0');
 
                 countdown.innerText = `${hours}:${minutes}:${seconds}`;
-            }, 1000);
+            };
+
+            updateCountdown();
+            timerInterval = setInterval(updateCountdown, 1000);
         }
 
+        // TOGGLE FULLSCREEN VIEW
         function toggleViewFullscreen() {
             if (!document.fullscreenElement) {
                 viewerContainer.requestFullscreen().catch(err => {
@@ -410,9 +437,13 @@
             }
         }
 
+        // SALIN TAUTAN BAGIKAN KE CLIPBOARD
         function copyUrl() {
-            navigator.clipboard.writeText(shareUrl.innerText);
-            alert('Link manifest AR berhasil disalin!');
+            navigator.clipboard.writeText(shareUrl.innerText).then(() => {
+                alert('Link manifest AR berhasil disalin!');
+            }).catch(() => {
+                alert('Gagal menyalin link secara otomatis.');
+            });
         }
     </script>
 </body>
