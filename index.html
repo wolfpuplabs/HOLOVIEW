@@ -1,419 +1,192 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Spatial AR Portal</title>
-    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
-    <style>
-        :root {
-            --bg-pure-black: #000000;
-            --card-dark: #0a0a0c;
-            --border-glow: #1e1e24;
-            --accent-spatial: #3b82f6;
-            --accent-glow: rgba(59, 130, 246, 0.25);
-            --text-main: #f4f4f5;
-            --text-muted: #71717a;
+const inputGlb = document.getElementById('inputGlb');
+const inputUsdz = document.getElementById('inputUsdz');
+const boxGlb = document.getElementById('boxGlb');
+const boxUsdz = document.getElementById('boxUsdz');
+const lblGlb = document.getElementById('lblGlb');
+const lblUsdz = document.getElementById('lblUsdz');
+const uploadBtn = document.getElementById('uploadBtn');
+const status = document.getElementById('status');
+const shareSection = document.getElementById('shareSection');
+const shareUrl = document.getElementById('shareUrl');
+const timerBadge = document.getElementById('timerBadge');
+const countdown = document.getElementById('countdown');
+const viewerContainer = document.getElementById('viewerContainer');
+
+const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+let localGlbUrl = "";
+let localUsdzUrl = "";
+let timerInterval = null; // Menyimpan referensi interval agar tidak double
+
+// INSTAN PREVIEW SAAT FILE GLB DIPILIH
+inputGlb.addEventListener('change', () => {
+    if (inputGlb.files[0]?.size > MAX_SIZE) { alert("File GLB lebih dari 10MB!"); inputGlb.value=""; return; }
+    if (inputGlb.files[0]) {
+        boxGlb.classList.add('has-file');
+        lblGlb.innerText = inputGlb.files[0].name;
+        
+        if (localGlbUrl) URL.revokeObjectURL(localGlbUrl);
+        localGlbUrl = URL.createObjectURL(inputGlb.files[0]);
+        
+        initEngineViewer(localGlbUrl, localUsdzUrl);
+        status.innerHTML = "<span style='color:#3b82f6;'>Local Preview Aktif. Siap di-view/di-AR!</span>";
+    }
+    checkInputs();
+});
+
+// INSTAN PREVIEW UNTUK USDZ
+inputUsdz.addEventListener('change', () => {
+    if (inputUsdz.files[0]?.size > MAX_SIZE) { alert("File USDZ lebih dari 10MB!"); inputUsdz.value=""; return; }
+    if (inputUsdz.files[0]) {
+        boxUsdz.classList.add('has-file');
+        lblUsdz.innerText = inputUsdz.files[0].name;
+
+        if (localUsdzUrl) URL.revokeObjectURL(localUsdzUrl);
+        localUsdzUrl = URL.createObjectURL(inputUsdz.files[0]);
+
+        if (localGlbUrl) {
+            initEngineViewer(localGlbUrl, localUsdzUrl);
         }
+    }
+    checkInputs();
+});
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
-        }
+function checkInputs() {
+    uploadBtn.disabled = !inputGlb.files[0];
+}
 
-        body {
-            background-color: var(--bg-pure-black);
-            color: var(--text-main);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-start;
-            align-items: center;
-            padding: 20px;
-            overflow-x: hidden;
-        }
+window.addEventListener('DOMContentLoaded', () => {
+    const params = new URLSearchParams(window.location.search);
+    const modelParam = params.get('glb');
+    const iosParam = params.get('usdz');
+    if (modelParam) {
+        initEngineViewer(modelParam, iosParam);
+        startDestructionTimer();
+    }
+});
 
-        body::before {
-            content: '';
-            position: absolute;
-            width: 400px;
-            height: 400px;
-            background: radial-gradient(circle, var(--accent-glow) 0%, rgba(0,0,0,0) 70%);
-            top: 15%;
-            left: 20%;
-            z-index: 0;
-            pointer-events: none;
-        }
+// TOMBOL PUBLISH SHARE
+uploadBtn.addEventListener('click', async () => {
+    uploadBtn.disabled = true;
+    status.innerHTML = "Mengirim Manifest Permanen ke Cloud Vercel...";
 
-        .container {
-            width: 100%;
-            max-width: 650px;
-            background: rgba(10, 10, 12, 0.8);
-            backdrop-filter: blur(20px);
-            padding: 30px;
-            border-radius: 24px;
-            border: 1px solid var(--border-glow);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.7);
-            z-index: 1;
-            position: relative;
-        }
-
-        h1 {
-            font-size: 26px;
-            font-weight: 700;
-            letter-spacing: -0.5px;
-            margin-bottom: 6px;
-            background: linear-gradient(to right, #fff, var(--text-muted));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .subtitle {
-            color: var(--text-muted);
-            font-size: 13px;
-            margin-bottom: 24px;
-        }
-
-        .upload-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
-            margin-bottom: 20px;
-        }
-
-        .upload-box {
-            border: 1px dashed #27272a;
-            padding: 24px 16px;
-            border-radius: 14px;
-            cursor: pointer;
-            background: #050507;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            text-align: center;
-        }
-
-        .upload-box:hover {
-            border-color: var(--accent-spatial);
-            box-shadow: 0 0 15px var(--accent-glow);
-        }
-
-        .upload-box.has-file {
-            border-style: solid;
-            border-color: #10b981;
-            background: rgba(16, 185, 129, 0.03);
-        }
-
-        .upload-box input { display: none; }
-        .box-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
-        .box-sub { font-size: 11px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-        .btn-spatial {
-            background: var(--text-main);
-            color: var(--bg-pure-black);
-            border: none;
-            padding: 14px;
-            border-radius: 12px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            width: 100%;
-            transition: all 0.2s;
-        }
-
-        .btn-spatial:hover {
-            transform: translateY(-1px);
-            box-shadow: 0 5px 15px rgba(255,255,255,0.1);
-        }
-
-        .btn-spatial:disabled {
-            background: #18181b;
-            color: #52525b;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-
-        #status { font-size: 13px; margin-top: 14px; font-weight: 500; text-align: center; }
-
-        #shareSection { margin-top: 24px; display: none; }
-        .share-wrapper {
-            background: #09090b;
-            border: 1px solid #18181b;
-            padding: 10px 14px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-top: 6px;
-        }
-        .share-text { font-size: 13px; color: var(--accent-spatial); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 85%; }
-        .btn-copy { background: #18181b; color: white; border: 1px solid #27272a; padding: 6px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; }
-
-        #timerBadge {
-            display: none;
-            margin: 16px auto 0 auto;
-            background: rgba(239, 68, 110, 0.1);
-            color: #f43f5e;
-            border: 1px solid rgba(239, 68, 110, 0.2);
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            width: fit-content;
-        }
-
-        #viewerContainer {
-            width: 100%;
-            height: 400px;
-            background: #000000;
-            border-radius: 16px;
-            margin-top: 24px;
-            display: none;
-            position: relative;
-            border: 1px solid #141416;
-            overflow: hidden;
-        }
-
-        model-viewer {
-            width: 100%;
-            height: 100%;
-            background-color: #000000;
-            --poster-color: transparent;
-        }
-
-        .fullscreen-toggle {
-            position: absolute;
-            bottom: 16px;
-            left: 16px;
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.1);
-            color: white;
-            padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 12px;
-            cursor: pointer;
-            z-index: 10;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-
-        #viewerContainer:fullscreen { border-radius: 0; width: 100vw; height: 100vh; margin-top: 0; }
-        #viewerContainer:fullscreen .fullscreen-toggle { bottom: 24px; left: 24px; }
-    </style>
-</head>
-<body>
-
-    <div class="container">
-        <h1>3D Spatial AR Portal</h1>
-        <p class="subtitle">Instant Local Preview Terpasang. File di-upload baru hancur tengah malam.</p>
-
-        <div class="upload-grid">
-            <div id="boxGlb" class="upload-box" onclick="document.getElementById('inputGlb').click()">
-                <div class="box-title">🤖 Android / Web Engine</div>
-                <div id="lblGlb" class="box-sub">Pilih file .glb (Wajib)</div>
-                <input type="file" id="inputGlb" accept=".glb">
-            </div>
-
-            <div id="boxUsdz" class="upload-box" onclick="document.getElementById('inputUsdz').click()">
-                <div class="box-title">🍏 iOS AR Engine</div>
-                <div id="lblUsdz" class="box-sub">Pilih file .usdz (Opsional)</div>
-                <input type="file" id="inputUsdz" accept=".usdz">
-            </div>
-        </div>
-
-        <button id="uploadBtn" class="btn-spatial" disabled>Publish & Get Share Link</button>
-        <p id="status"></p>
-
-        <div id="timerBadge">⏱️ Berkala Hancur Dalam: <span id="countdown">--:--:--</span></div>
-
-        <div id="shareSection">
-            <div class="share-wrapper">
-                <span id="shareUrl" class="share-text"></span>
-                <button class="btn-copy" onclick="copyUrl()">Copy</button>
-            </div>
-        </div>
-
-        <div id="viewerContainer">
-            <button class="fullscreen-toggle" onclick="toggleViewFullscreen()">
-                <span>🖥️</span> Fullscreen Mode
-            </button>
-        </div>
-    </div>
-
-    <script>
-        const inputGlb = document.getElementById('inputGlb');
-        const inputUsdz = document.getElementById('inputUsdz');
-        const boxGlb = document.getElementById('boxGlb');
-        const boxUsdz = document.getElementById('boxUsdz');
-        const lblGlb = document.getElementById('lblGlb');
-        const lblUsdz = document.getElementById('lblUsdz');
-        const uploadBtn = document.getElementById('uploadBtn');
-        const status = document.getElementById('status');
-        const shareSection = document.getElementById('shareSection');
-        const shareUrl = document.getElementById('shareUrl');
-        const timerBadge = document.getElementById('timerBadge');
-        const countdown = document.getElementById('countdown');
-        const viewerContainer = document.getElementById('viewerContainer');
-
-        const MAX_SIZE = 10 * 1024 * 1024; // 10MB
-        let localGlbUrl = "";
-        let localUsdzUrl = "";
-
-        // INSTAN PREVIEW SAAT FILE GLB DIPILIH
-        inputGlb.addEventListener('change', () => {
-            if (inputGlb.files[0]?.size > MAX_SIZE) { alert("File GLB lebih dari 10MB!"); inputGlb.value=""; return; }
-            if (inputGlb.files[0]) {
-                boxGlb.classList.add('has-file');
-                lblGlb.innerText = inputGlb.files[0].name;
-                
-                // Bikin Link Lokal Sementara
-                if (localGlbUrl) URL.revokeObjectURL(localGlbUrl);
-                localGlbUrl = URL.createObjectURL(inputGlb.files[0]);
-                
-                // Panggil Viewer Langsung pake file lokal!
-                initEngineViewer(localGlbUrl, localUsdzUrl);
-                status.innerHTML = "<span style='color:#3b82f6;'>Local Preview Aktif. Siap di-view/di-AR!</span>";
-            }
-            checkInputs();
+    try {
+        // 1. Upload GLB
+        const resGlb = await fetch(`/api/upload?filename=${encodeURIComponent(inputGlb.files[0].name)}`, {
+            method: 'POST', body: inputGlb.files[0]
         });
+        if (!resGlb.ok) throw new Error("Gagal mengunggah file GLB");
+        const dataGlb = await resGlb.json();
 
-        // INSTAN PREVIEW UNTUK USDZ (iOS QUICK LOOK LOKAL)
-        inputUsdz.addEventListener('change', () => {
-            if (inputUsdz.files[0]?.size > MAX_SIZE) { alert("File USDZ lebih dari 10MB!"); inputUsdz.value=""; return; }
-            if (inputUsdz.files[0]) {
-                boxUsdz.classList.add('has-file');
-                lblUsdz.innerText = inputUsdz.files[0].name;
-
-                if (localUsdzUrl) URL.revokeObjectURL(localUsdzUrl);
-                localUsdzUrl = URL.createObjectURL(inputUsdz.files[0]);
-
-                if (localGlbUrl) {
-                    initEngineViewer(localGlbUrl, localUsdzUrl);
-                }
-            }
-            checkInputs();
-        });
-
-        function checkInputs() {
-            uploadBtn.disabled = !inputGlb.files[0];
-        }
-
-        // Handle link share cloud dari URL (?glb=...&usdz=...)
-        window.addEventListener('DOMContentLoaded', () => {
-            const params = new URLSearchParams(window.location.search);
-            const modelParam = params.get('glb');
-            const iosParam = params.get('usdz');
-            if (modelParam) {
-                initEngineViewer(modelParam, iosParam);
-                startDestructionTimer();
-            }
-        });
-
-        // TOMBOL UPLOAD DIUBAH MENJADI TOMBOL PUBLISH/SHARE KE CLOUD
-        uploadBtn.addEventListener('click', async () => {
-            uploadBtn.disabled = true;
-            status.innerHTML = "Mengirim Manifest Permanen ke Cloud Vercel...";
-
-            try {
-                // 1. Upload GLB
-                const resGlb = await fetch(`/api/upload?filename=${encodeURIComponent(inputGlb.files[0].name)}`, {
-                    method: 'POST', body: inputGlb.files[0]
-                });
-                if (!resGlb.ok) throw new Error("Gagal mengunggah file GLB");
-                const dataGlb = await resGlb.json();
-
-                // 2. Upload USDZ jika ada
-                let cloudUsdzUrl = "";
-                if (inputUsdz.files[0]) {
-                    status.innerHTML = "Menyinkronkan iOS Engine ke Cloud...";
-                    const resUsdz = await fetch(`/api/upload?filename=${encodeURIComponent(inputUsdz.files[0].name)}`, {
-                        method: 'POST', body: inputUsdz.files[0]
-                    });
-                    if (!resUsdz.ok) throw new Error("Gagal mengunggah file USDZ");
-                    const dataUsdz = await resUsdz.json();
-                    cloudUsdzUrl = dataUsdz.url;
-                }
-
-                status.innerHTML = "<span style='color:#10b981;'>Published! File tersimpan di Cloud selama 24 jam.</span>";
-                
-                let shareLink = `${window.location.origin}${window.location.pathname}?glb=${encodeURIComponent(dataGlb.url)}`;
-                if(cloudUsdzUrl) shareLink += `&usdz=${encodeURIComponent(cloudUsdzUrl)}`;
-
-                shareUrl.innerText = shareLink;
-                shareSection.style.display = 'block';
-
-                // Ganti engine viewer ke link cloud resminya
-                initEngineViewer(dataGlb.url, cloudUsdzUrl);
-                startDestructionTimer();
-
-            } catch (err) {
-                status.innerHTML = `<span style='color:#ef4444;'>Error Cloud: ${err.message}</span>`;
-                uploadBtn.disabled = false;
-            }
-        });
-
-        function initEngineViewer(glbUrl, usdzUrl) {
-            viewerContainer.style.display = 'block';
-            const oldViewer = viewerContainer.querySelector('model-viewer');
-            if (oldViewer) oldViewer.remove();
-
-            const viewer = document.createElement('model-viewer');
-            viewer.setAttribute('src', glbUrl);
-            viewer.setAttribute('ar', '');
-            viewer.setAttribute('ar-modes', 'webxr scene-viewer quick-look');
-            viewer.setAttribute('camera-controls', '');
-            viewer.setAttribute('auto-rotate', '');
-            viewer.setAttribute('shadow-intensity', '1');
-            viewer.setAttribute('autoplay', '');
-
-            viewer.addEventListener('load', () => {
-                const anims = viewer.availableAnimations;
-                if (anims && anims.length > 0) {
-                    viewer.animationName = anims[0];
-                    viewer.play();
-                }
+        // 2. Upload USDZ jika ada
+        let cloudUsdzUrl = "";
+        if (inputUsdz.files[0]) {
+            status.innerHTML = "Menyinkronkan iOS Engine ke Cloud...";
+            const resUsdz = await fetch(`/api/upload?filename=${encodeURIComponent(inputUsdz.files[0].name)}`, {
+                method: 'POST', body: inputUsdz.files[0]
             });
+            if (!resUsdz.ok) throw new Error("Gagal mengunggah file USDZ");
+            const dataUsdz = await resUsdz.json();
+            cloudUsdzUrl = dataUsdz.url;
+        }
 
-            if (usdzUrl && usdzUrl !== "null" && usdzUrl !== "") {
-                viewer.setAttribute('ios-src', usdzUrl);
+        status.innerHTML = "<span style='color:#10b981;'>Published! File tersimpan di Cloud sampai tengah malam.</span>";
+        
+        let shareLink = `${window.location.origin}${window.location.pathname}?glb=${encodeURIComponent(dataGlb.url)}`;
+        if(cloudUsdzUrl) shareLink += `&usdz=${encodeURIComponent(cloudUsdzUrl)}`;
+
+        shareUrl.innerText = shareLink;
+        shareSection.style.display = 'block';
+
+        // Bersihkan Object URL lokal karena sudah digantikan link cloud (Hemat Memori)
+        if (localGlbUrl) { URL.revokeObjectURL(localGlbUrl); localGlbUrl = ""; }
+        if (localUsdzUrl) { URL.revokeObjectURL(localUsdzUrl); localUsdzUrl = ""; }
+
+        initEngineViewer(dataGlb.url, cloudUsdzUrl);
+        startDestructionTimer();
+
+    } catch (err) {
+        status.innerHTML = `<span style='color:#ef4444;'>Error Cloud: ${err.message}</span>`;
+        uploadBtn.disabled = false;
+    }
+});
+
+function initEngineViewer(glbUrl, usdzUrl) {
+    viewerContainer.style.display = 'block';
+    
+    // Hapus viewer lama jika ada agar tidak tumpang tindih
+    const oldViewer = viewerContainer.querySelector('model-viewer');
+    if (oldViewer) oldViewer.remove();
+
+    const viewer = document.createElement('model-viewer');
+    viewer.setAttribute('src', glbUrl);
+    viewer.setAttribute('ar', '');
+    viewer.setAttribute('ar-modes', 'webxr scene-viewer quick-look');
+    viewer.setAttribute('camera-controls', '');
+    viewer.setAttribute('auto-rotate', '');
+    viewer.setAttribute('shadow-intensity', '1');
+
+    // Mengatasi bug animasi tidak berputar otomatis saat ganti model
+    viewer.addEventListener('load', () => {
+        setTimeout(() => {
+            const anims = viewer.availableAnimations;
+            if (anims && anims.length > 0) {
+                viewer.setAttribute('animation-name', anims[0]);
+                viewer.play();
             }
+        }, 100); // Jeda micro-tasking aman untuk memastikan data animasi ter-load
+    });
 
-            viewerContainer.appendChild(viewer);
+    if (usdzUrl && usdzUrl !== "null" && usdzUrl !== "") {
+        viewer.setAttribute('ios-src', usdzUrl);
+    }
+
+    // Masukkan di awal (prepend) agar tidak merusak posisi tombol fullscreen
+    viewerContainer.prepend(viewer);
+}
+
+function startDestructionTimer() {
+    if (timerInterval) clearInterval(timerInterval); // Reset jika ada timer berjalan sebelumnya
+    
+    timerBadge.style.display = 'block';
+    
+    const updateCountdown = () => {
+        const now = new Date();
+        const tomorrow = new Date();
+        tomorrow.setHours(24, 0, 0, 0);
+        const diff = tomorrow - now;
+        
+        if (diff <= 0) {
+            countdown.innerText = "00:00:00";
+            clearInterval(timerInterval);
+            location.reload(); // Refresh halaman saat waktu habis
+            return;
         }
+        
+        const hours = String(Math.floor((diff / (1000 * 60 * 60)) % 24)).padStart(2, '0');
+        const minutes = String(Math.floor((diff / (1000 * 60)) % 60)).padStart(2, '0');
+        const seconds = String(Math.floor((diff / 1000) % 60)).padStart(2, '0');
 
-        function startDestructionTimer() {
-            timerBadge.style.display = 'block';
-            setInterval(() => {
-                const now = new Date();
-                const tomorrow = new Date();
-                tomorrow.setHours(24, 0, 0, 0);
-                const diff = tomorrow - now;
-                
-                const hours = String(Math.floor((diff / (1000 * 60 * 60)) % 24)).padStart(2, '0');
-                const minutes = String(Math.floor((diff / (1000 * 60)) % 60)).padStart(2, '0');
-                const seconds = String(Math.floor((diff / 1000) % 60)).padStart(2, '0');
+        countdown.innerText = `${hours}:${minutes}:${seconds}`;
+    };
 
-                countdown.innerText = `${hours}:${minutes}:${seconds}`;
-            }, 1000);
-        }
+    updateCountdown(); // Jalankan sekali langsung tanpa nunggu 1 detik pertama
+    timerInterval = setInterval(updateCountdown, 1000);
+}
 
-        function toggleViewFullscreen() {
-            if (!document.fullscreenElement) {
-                viewerContainer.requestFullscreen().catch(err => {
-                    alert(`Gagal Fullscreen: ${err.message}`);
-                });
-            } else {
-                document.exitFullscreen();
-            }
-        }
+function toggleViewFullscreen() {
+    if (!document.fullscreenElement) {
+        viewerContainer.requestFullscreen().catch(err => {
+            alert(`Gagal Fullscreen: ${err.message}`);
+        });
+    } else {
+        document.exitFullscreen();
+    }
+}
 
-        function copyUrl() {
-            navigator.clipboard.writeText(shareUrl.innerText);
-            alert('Link manifest AR berhasil disalin!');
-        }
-    </script>
-</body>
-</html>
+function copyUrl() {
+    navigator.clipboard.writeText(shareUrl.innerText).then(() => {
+        alert('Link manifest AR berhasil disalin!');
+    }).catch(() => {
+        alert('Gagal menyalin link secara otomatis.');
+    });
+}
