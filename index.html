@@ -141,7 +141,6 @@
             width: fit-content;
         }
 
-        /* Pure Black Viewer Container dengan efek Spatial Radial Glow */
         #viewerContainer {
             width: 100%;
             height: 400px;
@@ -155,7 +154,6 @@
             box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.9);
         }
 
-        /* Diubah ke transparent agar background gradient di container terlihat menembus */
         model-viewer {
             width: 100%;
             height: 100%;
@@ -168,11 +166,10 @@
             left: 0;
             width: 100%;
             height: 100%;
-            pointer-events: none; /* Supaya klik tidak terhalang ke model-viewer */
+            pointer-events: none;
             z-index: 10;
         }
 
-        /* Fullscreen Button Styles */
         .btn-fullscreen {
             position: absolute;
             top: 16px;
@@ -189,7 +186,7 @@
             cursor: pointer;
             box-shadow: 0 4px 15px rgba(0,0,0,0.5);
             transition: all 0.2s ease;
-            pointer-events: auto; /* Mengembalikan interaksi klik khusus tombol */
+            pointer-events: auto;
             z-index: 12;
         }
 
@@ -199,7 +196,6 @@
             transform: scale(1.05);
         }
 
-        /* Native Fullscreen API overrides */
         #viewerContainer:fullscreen {
             width: 100vw !important;
             height: 100vh !important;
@@ -207,7 +203,7 @@
             border-radius: 0 !important;
             border: none !important;
             margin: 0 !important;
-            background: #000000 !important; /* Full black saat fullscreen penuh */
+            background: #000000 !important;
         }
 
         .modal-overlay {
@@ -312,7 +308,159 @@
             z-index: 2;
         }
 
+        /* FIXED & COMPLETED CARD FOOTER STYLES */
         .card-footer {
             display: flex;
             justify-content: space-between;
-            align-items: center
+            align-items: center;
+            border-top: 1px solid #1a1a26;
+            padding-top: 14px;
+        }
+
+        .card-meta {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .card-meta-title {
+            font-size: 12px;
+            color: #ffffff;
+            font-weight: 600;
+        }
+
+        .card-meta-desc {
+            font-size: 10px;
+            color: var(--text-muted);
+        }
+
+        #qrcode {
+            width: 64px;
+            height: 64px;
+            background: #ffffff;
+            padding: 4px;
+            border-radius: 6px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>HOLOVIEW</h1>
+        <div class="subtitle">Spatial AR Portal / Upload GLB or USDZ Asset</div>
+        
+        <div class="upload-grid">
+            <div class="upload-box" onclick="document.getElementById('glbInput').click()" id="glbBox">
+                <div class="box-title">GLB Model</div>
+                <div class="box-sub" id="glbName">Click to browse (.glb)</div>
+                <input type="file" id="glbInput" accept=".glb">
+            </div>
+            
+            <div class="upload-box" onclick="document.getElementById('usdzInput').click()" id="usdzBox">
+                <div class="box-title">USDZ Model (iOS)</div>
+                <div class="box-sub" id="usdzName">Click to browse (.usdz)</div>
+                <input type="file" id="usdzInput" accept=".usdz">
+            </div>
+        </div>
+
+        <button class="btn-spatial" id="renderBtn" disabled>Launch Spatial Portal</button>
+        <div id="status">Ready for asset input.</div>
+        <div id="timerBadge">Session Active</div>
+
+        <div id="viewerContainer" id="portalViewer">
+            <model-viewer id="modelViewer" ar ar-modes="webxr scene-viewer quick-look" camera-controls touch-action="none" shadow-intensity="1">
+                <button class="btn-fullscreen" onclick="toggleFullscreen()" slot="hotspot-fullscreen">⛶</button>
+            </model-viewer>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-content">
+            <div class="ar-card-capture-area" id="captureArea">
+                <div class="card-header">
+                    <div class="card-logo-box">🌀</div>
+                    <div>
+                        <div class="card-title-main">HOLOVIEW</div>
+                        <div class="card-title-sub">Spatial Portal Passport</div>
+                    </div>
+                </div>
+                <div class="card-preview-body">
+                    <span style="color: #333; font-size: 12px;">Asset Loaded Successfully</span>
+                </div>
+                <div class="card-footer">
+                    <div class="card-meta">
+                        <div class="card-meta-title">AR Experience</div>
+                        <div class="card-meta-desc">Scan to view object in your room</div>
+                    </div>
+                    <div id="qrcode"></div>
+                </div>
+            </div>
+            <button class="btn-spatial" style="max-width: 360px;" onclick="closeModal()">Dismiss Passport</button>
+        </div>
+    </div>
+
+    <script>
+        // Simple client side hook to light up the UI on file loads
+        const glbInput = document.getElementById('glbInput');
+        const usdzInput = document.getElementById('usdzInput');
+        const renderBtn = document.getElementById('renderBtn');
+        const viewerContainer = document.getElementById('viewerContainer');
+        const modelViewer = document.getElementById('modelViewer');
+
+        function updateFormState() {
+            if (glbInput.files.length > 0) {
+                renderBtn.removeAttribute('disabled');
+                document.getElementById('status').innerText = "Assets synchronized. Click Launch.";
+            }
+        }
+
+        glbInput.addEventListener('change', (e) => {
+            if(e.target.files[0]) {
+                document.getElementById('glbName').innerText = e.target.files[0].name;
+                document.getElementById('glbBox').classList.add('has-file');
+                updateFormState();
+            }
+        });
+
+        usdzInput.addEventListener('change', (e) => {
+            if(e.target.files[0]) {
+                document.getElementById('usdzName').innerText = e.target.files[0].name;
+                document.getElementById('usdzBox').classList.add('has-file');
+            }
+        });
+
+        renderBtn.addEventListener('click', () => {
+            const file = glbInput.files[0];
+            if (file) {
+                const url = URL.createObjectURL(file);
+                modelViewer.src = url;
+                
+                // If iOS file is ready, bundle it into model-viewer local src
+                if(usdzInput.files[0]) {
+                    const usdzUrl = URL.createObjectURL(usdzInput.files[0]);
+                    modelViewer.setAttribute('ios-src', usdzUrl);
+                }
+
+                viewerContainer.style.display = 'block';
+                document.getElementById('timerBadge').style.display = 'block';
+                document.getElementById('status').innerText = "Portal Active.";
+            }
+        });
+
+        function toggleFullscreen() {
+            const container = document.getElementById('viewerContainer');
+            if (!document.fullscreenElement) {
+                container.requestFullscreen().catch(err => {
+                    console.log(`Error going fullscreen: ${err.message}`);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.remove('active');
+        }
+    </script>
+</body>
+</html>
