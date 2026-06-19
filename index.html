@@ -211,7 +211,12 @@
         }
         .meta-item { display: flex; font-size: 10px; font-weight: 600; text-transform: uppercase; }
         .meta-label { color: #57576b; width: 55px; letter-spacing: 0.5px; }
-        .meta-value { color: #ffffff; font-family: monospace; font-size: 11px; }
+        
+        /* FIX UNTUK TEKS NAMA FILE KEPANJANGAN */
+        .meta-value { 
+            color: #ffffff; font-family: monospace; font-size: 11px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 80px; display: block;
+        }
 
         .qr-wrapper-zone { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
         .scan-to-view-text { font-size: 8px; font-weight: 700; color: #a5a5b4; text-transform: uppercase; letter-spacing: 0.8px; text-align: right; line-height: 1.2; }
@@ -233,7 +238,7 @@
     <div class="container">
         <div style="margin-bottom: 24px;">
             <h1 style="font-size: 22px; font-weight: 700; letter-spacing: -0.2px;">HOLOVIEW</h1>
-            <div style="color: var(--text-muted); font-size: 12px; margin-top: 2px;">Ecosystem Engine active. Secure Zero-Dep Sync.</div>
+            <div style="color: var(--text-muted); font-size: 12px; margin-top: 2px;">Ecosystem Engine active. Secure Server-Side Sync.</div>
         </div>
         
         <div class="upload-grid">
@@ -281,7 +286,7 @@
                     <div class="metadata-box">
                         <div class="meta-item">
                             <span class="meta-label">Model</span>
-                            <span class="meta-value" id="metaName">LOADED</span>
+                            <span class="meta-value" id="metaName" title="LOADED">LOADED</span>
                         </div>
                         <div class="meta-item">
                             <span class="meta-label">Size</span>
@@ -321,7 +326,6 @@
         let glbPublicUrl = "";
         let usdzPublicUrl = "";
 
-        // PEMBACA PARAMETER LINK KETIKA USER MEMBUKA QR CODE
         window.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             const modelUrl = urlParams.get('model');
@@ -348,21 +352,14 @@
             }
         });
 
-        // FUNGSI UPLOAD YANG MENGGUNAKAN API INTERNAL VERCEL KITA
         async function uploadSecureAsset(file) {
             const response = await fetch('/api/upload', {
                 method: "POST",
                 headers: { "X-Filename": encodeURIComponent(file.name) },
                 body: file
             });
-
             const data = await response.json();
-
-            // Jika respons dari server gagal (Bukan status 2xx)
-            if (!response.ok) {
-                throw new Error(data.error || "Gagal menghubungi backend Vercel.");
-            }
-
+            if (!response.ok) throw new Error(data.error || "Gagal menghubungi backend Vercel.");
             return data.url; 
         }
 
@@ -379,7 +376,6 @@
                     document.getElementById('glbName').innerText = file.name;
                     document.getElementById('glbBox').classList.add('has-file');
 
-                    // Proses eksekusi API Internal
                     glbPublicUrl = await uploadSecureAsset(file);
                     
                     modelViewer.src = glbPublicUrl;
@@ -389,7 +385,6 @@
                     statusText.innerText = "Cloud Engine Configured. Ready to Publish!";
                     statusText.style.color = "#10b981";
                 } catch (err) {
-                    // Munculkan log error persis seperti yang dikirim oleh backend
                     alert("Error dari Server: " + err.message);
                     statusText.innerText = "Configuration Error.";
                     statusText.style.color = "#ef4444";
@@ -422,7 +417,9 @@
             const qrContainer = document.getElementById('qrcode');
             qrContainer.innerHTML = ""; 
 
+            // Update nama file & size
             document.getElementById('metaName').innerText = currentFileName;
+            document.getElementById('metaName').title = currentFileName; // Menambahkan title untuk tooltip
             document.getElementById('metaSize').innerText = currentFileSize;
 
             try {
@@ -433,7 +430,6 @@
             }
 
             const baseUrl = window.location.origin + window.location.pathname;
-            
             shareableConstructedUrl = `${baseUrl}?model=${encodeURIComponent(glbPublicUrl)}&name=${encodeURIComponent(currentFileName)}&size=${encodeURIComponent(currentFileSize)}`;
             if(usdzPublicUrl) {
                 shareableConstructedUrl += `&ios=${encodeURIComponent(usdzPublicUrl)}`;
@@ -451,12 +447,36 @@
             document.getElementById('modalOverlay').classList.add('active');
         });
 
+        // FUNGSI COPY BERLAPIS (MENCEGAH BROWSER GAGAL MENGCOPY)
+        function fallbackCopyTextToClipboard(text) {
+            var textArea = document.createElement("textarea");
+            textArea.value = text;
+            textArea.style.position = "fixed"; 
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            try {
+                var successful = document.execCommand('copy');
+                if(successful) alert("Link AR Portal berhasil disalin!");
+                else alert("Browser memblokir aksi salin. Silakan copy URL di atas secara manual.");
+            } catch (err) {
+                console.error('Fallback: Oops, unable to copy', err);
+            }
+            document.body.removeChild(textArea);
+        }
+
         function copyShareLink() {
-            navigator.clipboard.writeText(shareableConstructedUrl).then(() => {
-                alert("Link AR Portal berhasil disalin!");
-            }).catch(err => {
-                console.error("Gagal menyalin link: ", err);
-            });
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(shareableConstructedUrl).then(() => {
+                    alert("Link AR Portal berhasil disalin!");
+                }).catch(err => {
+                    // Jika diblokir oleh permission browser, jalankan fungsi darurat
+                    fallbackCopyTextToClipboard(shareableConstructedUrl);
+                });
+            } else {
+                // Untuk browser versi lama
+                fallbackCopyTextToClipboard(shareableConstructedUrl);
+            }
         }
 
         function saveToPhotos() {
