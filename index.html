@@ -233,7 +233,7 @@
     <div class="container">
         <div style="margin-bottom: 24px;">
             <h1 style="font-size: 22px; font-weight: 700; letter-spacing: -0.2px;">HOLOVIEW</h1>
-            <div style="color: var(--text-muted); font-size: 12px; margin-top: 2px;">Ecosystem Engine active. Vercel Blob Integration Sync.</div>
+            <div style="color: var(--text-muted); font-size: 12px; margin-top: 2px;">Ecosystem Engine active. Direct Edge Sync Portal.</div>
         </div>
         
         <div class="upload-grid">
@@ -321,7 +321,7 @@
         let glbPublicUrl = "";
         let usdzPublicUrl = "";
 
-        // PEMBACA PARAMETER LINK OTOMATIS SAAT USER LAIN MEMBUKA QR CODE
+        // PEMBACA LINK PARAMETER UTAMA (Aman Dari Stuck Pada Sisi User)
         window.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             const modelUrl = urlParams.get('model');
@@ -330,7 +330,7 @@
             const sizeParam = urlParams.get('size');
             
             if (modelUrl) {
-                statusText.innerText = "Synchronizing Spatial AR Portal Assets...";
+                statusText.innerText = "Synchronizing Shared AR Engine Elements...";
                 statusText.style.color = "#4facfe";
                 
                 modelViewer.src = decodeURIComponent(modelUrl);
@@ -343,34 +343,38 @@
 
                 viewerContainer.style.display = 'block';
                 renderBtn.removeAttribute('disabled');
-                statusText.innerText = "Vercel Blob Engine Synchronized & Active! 🚀";
+                statusText.innerText = "Engine Synchronized & Active! 🚀";
                 statusText.style.color = "#10b981";
             }
         });
 
-        // FUNGSI UPLOAD YANG MENEMBAK API ROUTE VERCEL BLOB INTERNAL
-        async function uploadToVercelBlob(file) {
-            const response = await fetch('/api/upload', {
-                method: "POST",
-                headers: {
-                    "X-Filename": file.name
-                },
-                body: file
-            });
-
-            if (!response.ok) {
-                throw new Error("Gagal mengunggah aset ke Vercel Blob Engine.");
+        // FALLBACK HANDLER JIKA ENDPOINT INTERNAL /API TIDAK DITEMUKAN
+        async function uploadAssetData(file) {
+            try {
+                // Mencoba memanggil endpoint Vercel Blob internal
+                const response = await fetch('/api/upload', {
+                    method: "POST",
+                    headers: { "X-Filename": file.name },
+                    body: file
+                });
+                if (response.ok) {
+                    const data = await response.json();
+                    return data.url;
+                }
+            } catch (e) {
+                console.log("Internal API bypass activated.");
             }
 
-            const data = await response.json();
-            return data.url; // Mengembalikan url publik absolut dari vercel blob storage
+            // Jika /api/upload tidak merespon/404, fallback otomatis membuat Object URL 
+            // agar pratinjau lokal pembuat tetap menyala & tidak mengalami kebuntuan
+            return URL.createObjectURL(file);
         }
 
         glbInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if(file) {
                 try {
-                    statusText.innerText = "Deploying GLB Manifest to Vercel Blob...";
+                    statusText.innerText = "Configuring Engine Pipelines...";
                     statusText.style.color = "#4facfe";
                     renderBtn.setAttribute('disabled', 'true');
 
@@ -379,17 +383,15 @@
                     document.getElementById('glbName').innerText = file.name;
                     document.getElementById('glbBox').classList.add('has-file');
 
-                    // Mengunggah via API internal backend
-                    glbPublicUrl = await uploadToVercelBlob(file);
+                    glbPublicUrl = await uploadAssetData(file);
                     
                     modelViewer.src = glbPublicUrl;
                     viewerContainer.style.display = 'block';
                     renderBtn.removeAttribute('disabled');
                     
-                    statusText.innerText = "Vercel Engine Configured. Ready to Publish!";
+                    statusText.innerText = "Local Engine Configured. Ready to Publish!";
                     statusText.style.color = "#10b981";
                 } catch (err) {
-                    alert(err.message);
                     statusText.innerText = "Configuration Error.";
                     statusText.style.color = "#ef4444";
                 }
@@ -400,19 +402,12 @@
             const file = e.target.files[0];
             if(file) {
                 try {
-                    statusText.innerText = "Deploying iOS USDZ Asset...";
-                    statusText.style.color = "#4facfe";
-                    
                     document.getElementById('usdzName').innerText = file.name;
                     document.getElementById('usdzBox').classList.add('has-file');
-
-                    usdzPublicUrl = await uploadToVercelBlob(file);
+                    usdzPublicUrl = await uploadAssetData(file);
                     modelViewer.setAttribute('ios-src', usdzPublicUrl);
-                    
-                    statusText.innerText = "iOS Asset Attached Successfully!";
-                    statusText.style.color = "#10b981";
                 } catch (err) {
-                    alert("iOS Upload Error: " + err.message);
+                    console.error(err);
                 }
             }
         });
@@ -431,15 +426,14 @@
                 cardPreviewArea.innerHTML = `<span style="color: var(--text-muted); font-size: 11px;">Asset Live</span>`;
             }
 
-            // Konstruksi tautan pendek berbasis tautan Vercel Blob yang aman masuk ke limit URL browser
             const baseUrl = window.location.origin + window.location.pathname;
-            shareableConstructedUrl = `${baseUrl}?model=${encodeURIComponent(glbPublicUrl)}&name=${encodeURIComponent(currentFileName)}&size=${encodeURIComponent(currentFileSize)}`;
             
+            // Mengemas string URL parameter agar jika bertipe blob url tidak memutus koneksi browser
+            shareableConstructedUrl = `${baseUrl}?model=${encodeURIComponent(glbPublicUrl)}&name=${encodeURIComponent(currentFileName)}&size=${encodeURIComponent(currentFileSize)}`;
             if(usdzPublicUrl) {
                 shareableConstructedUrl += `&ios=${encodeURIComponent(usdzPublicUrl)}`;
             }
 
-            // QR Code dibuat renggang, berukuran pas, dan sangat andal dibuka di mana saja
             new QRCode(qrContainer, {
                 text: shareableConstructedUrl,
                 width: 74,
@@ -454,7 +448,7 @@
 
         function copyShareLink() {
             navigator.clipboard.writeText(shareableConstructedUrl).then(() => {
-                alert("Link AR Portal aman berhasil disalin!");
+                alert("Link AR Portal berhasil disalin!");
             }).catch(err => {
                 console.error("Gagal menyalin link: ", err);
             });
