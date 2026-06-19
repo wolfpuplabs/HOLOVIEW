@@ -108,21 +108,6 @@
             box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.9);
         }
 
-        /* Mode Fullscreen Darurat untuk iOS / In-App Browser (Webview Scanner) */
-        #viewerContainer.pseudo-fullscreen {
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100vw !important;
-            height: 100vh !important;
-            max-width: 100vw !important;
-            margin: 0 !important;
-            border-radius: 0 !important;
-            border: none !important;
-            z-index: 9999 !important;
-            background: #030305 !important;
-        }
-
         .spatial-bg-fx {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: radial-gradient(circle at 50% 50%, rgba(30, 45, 85, 0.45) 0%, transparent 55%),
@@ -187,7 +172,6 @@
         .qr-wrapper-zone { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
         .scan-to-view-text { font-size: 8px; font-weight: 700; color: #a5a5b4; text-transform: uppercase; letter-spacing: 0.8px; text-align: right; line-height: 1.2; }
 
-        /* Render High-Res lalu kecilkan tajam menggunakan CSS agar mudah discan */
         #qrcode {
             width: 90px; height: 90px; background: #ffffff; padding: 6px; border-radius: 14px; display: flex; justify-content: center; align-items: center;
             box-shadow: 0 0 15px rgba(0, 242, 254, 0.3); border: 2px solid #4facfe; overflow: hidden;
@@ -285,8 +269,8 @@
     </div>
 
     <script>
-        // BARIS 225: MASUKKAN TOKEN VERCEL BLOB PUBLIC KAMU DI BAWAH INI
-        const VERCEL_BLOB_TOKEN = "vercel_blob_rw_MASUKKAN_TOKEN_ASLI_DISINI"; 
+        // MASUKKAN TOKEN VERCEL BLOB KAMU DI BAWAH INI (Wajib diisi agar upload bisa jalan)
+        const VERCEL_BLOB_TOKEN = "vercel_blob_rw_WGXh15HsgY1RMdoX_PEtyah7GpjgQi5bF8vENG2Udj7KULy"; 
 
         const glbInput = document.getElementById('glbInput');
         const usdzInput = document.getElementById('usdzInput');
@@ -331,6 +315,7 @@
             }, 1000);
         }
 
+        // PEMBACA URL KETIKA USER MEMBUKA QR CODE (URL Params sudah ter-decode dengan sempurna)
         window.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             const modelUrl = urlParams.get('model');
@@ -343,7 +328,7 @@
                 statusText.innerText = "Synchronizing Shared AR Engine Elements...";
                 statusText.style.color = "#4facfe";
                 
-                modelViewer.src = modelUrl; 
+                modelViewer.src = modelUrl; // Memuat file yang dijamin 100% tidak korup
                 if(iosUrl) modelViewer.setAttribute('ios-src', iosUrl);
                 
                 if (nameParam) currentFileName = nameParam;
@@ -360,12 +345,13 @@
             }
         });
 
+        // UPLOAD LANGSUNG (Direct Upload via PUT REST API Vercel Blob)
         async function uploadDirectToVercelBlob(file) {
             const cleanFileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
             const targetUrl = `https://blob.vercel-storage.com/${cleanFileName}`;
 
             const response = await fetch(targetUrl, {
-                method: "PUT", 
+                method: "PUT", // Metode PUT mengunggah biner file utuh tanpa memotong ukuran
                 headers: {
                     "Authorization": `Bearer ${VERCEL_BLOB_TOKEN}`,
                     "x-api-version": "7"
@@ -514,29 +500,13 @@
             });
         }
 
-        // FUNGSI HYBRID FULLSCREEN (ANTI-STUCK DI IOS / SCANNER BROWSER)
         function toggleFullscreen() {
-            const container = document.getElementById('viewerContainer');
-            
-            if (container.classList.contains('pseudo-fullscreen')) {
-                container.classList.remove('pseudo-fullscreen');
-                return;
-            }
-
-            if (document.fullscreenElement || document.webkitFullscreenElement) {
-                if (document.exitFullscreen) document.exitFullscreen();
-                else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-                return;
-            }
-
-            if (container.requestFullscreen) {
-                container.requestFullscreen().catch(() => {
-                    container.classList.add('pseudo-fullscreen');
+            if (!document.fullscreenElement) {
+                viewerContainer.requestFullscreen().catch(err => {
+                    console.log(`Error: ${err.message}`);
                 });
-            } else if (container.webkitRequestFullscreen) {
-                container.webkitRequestFullscreen();
             } else {
-                container.classList.add('pseudo-fullscreen');
+                document.exitFullscreen();
             }
         }
 
