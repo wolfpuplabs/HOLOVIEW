@@ -1,41 +1,32 @@
 import { put } from '@vercel/blob';
 
+// Ganti config Edge ke config buat matiin bodyParser
 export const config = {
-  runtime: 'edge',
+  api: {
+    bodyParser: false, // Wajib dimatiin biar file 3D-nya masuk utuh sebagai stream
+  },
 };
 
-export default async function handler(request) {
-  if (request.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), { 
-      status: 405,
-      headers: { 'Content-Type': 'application/json' }
-    });
+export default async function handler(req, res) {
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { searchParams } = new URL(request.url);
-  const filename = searchParams.get('filename');
+  // Di Node.js runtime, ambil parameter dari req.query
+  const filename = req.query.filename;
 
   if (!filename) {
-    return new Response(JSON.stringify({ error: 'Missing filename parameter' }), { 
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return res.status(400).json({ error: 'Missing filename parameter' });
   }
 
   try {
-    // request.body contains the stream of the uploaded file
-    const blob = await put(filename, request.body, {
+    // req bisa langsung dikirim sebagai stream ke Vercel Blob
+    const blob = await put(filename, req, {
       access: 'public',
     });
 
-    return new Response(JSON.stringify(blob), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return res.status(200).json(blob);
   } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), { 
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return res.status(500).json({ error: error.message });
   }
 }
