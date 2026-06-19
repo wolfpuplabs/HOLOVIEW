@@ -105,20 +105,65 @@
 
         #status { font-size: 13px; margin-top: 14px; font-weight: 500; text-align: center; color: #71717a; }
 
+        /* --- VIEWER CONTAINER WITH SPATIAL ANIMATED FX --- */
         #viewerContainer {
             width: 100%;
             height: 440px;
-            background: radial-gradient(circle at center, rgba(30, 30, 50, 0.4) 0%, rgba(10, 10, 15, 0.9) 60%, #050507 100%);
+            background: #030305;
             border-radius: 20px;
             margin-top: 24px;
             display: none;
             position: relative;
-            border: 1px solid #1a1a26;
+            border: 1px solid #141420;
             overflow: hidden;
             box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.9);
         }
 
-        model-viewer { width: 100%; height: 100%; background-color: transparent; }
+        /* FX Layer 1: Animasi Ambient Glow Spasial Bergerak */
+        .spatial-bg-fx {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: 
+                radial-gradient(circle at 50% 50%, rgba(30, 45, 85, 0.45) 0%, transparent 55%),
+                radial-gradient(circle at 20% 30%, rgba(79, 172, 254, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 80% 70%, rgba(177, 86, 255, 0.12) 0%, transparent 45%);
+            background-size: 200% 200%;
+            animation: spatialAmbient 12s ease-in-out infinite alternate;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        /* FX Layer 2: Efek Gelombang Denyut Energi Spasial */
+        .spatial-pulse-fx {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 250px; height: 250px;
+            background: radial-gradient(circle, rgba(79, 172, 254, 0.08) 0%, transparent 70%);
+            transform: translate(-50%, -50%) scale(0.8);
+            animation: spatialPulse 4s ease-in-out infinite alternate;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        model-viewer { 
+            width: 100%; 
+            height: 100%; 
+            background-color: transparent; 
+            position: relative;
+            z-index: 1; /* Di atas lapisan animasi */
+        }
+
+        /* Keyframes untuk Animasi Spasial */
+        @keyframes spatialAmbient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 50% 100%; }
+        }
+
+        @keyframes spatialPulse {
+            0% { transform: translate(-50%, -50%) scale(0.85); opacity: 0.5; }
+            100% { transform: translate(-50%, -50%) scale(1.25); opacity: 1; }
+        }
 
         .btn-fullscreen {
             position: absolute;
@@ -166,7 +211,7 @@
             max-width: 380px;
         }
 
-        /* --- DESAIN KARTU JADI SEPERTI GAMBAR KEDUA --- */
+        /* Card Passport Style */
         .ar-card-capture-area {
             width: 360px;
             height: 520px;
@@ -177,7 +222,6 @@
             flex-direction: column;
             justify-content: space-between;
             position: relative;
-            /* Border Gradasi Glow Sci-Fi */
             border: 3px solid transparent;
             background-image: linear-gradient(#09090e, #09090e), linear-gradient(135deg, #00f2fe 0%, #4facfe 30%, #b156ff 70%, #00f2fe 100%);
             background-origin: border-box;
@@ -238,7 +282,6 @@
             object-fit: contain;
         }
 
-        /* Dekorasi Garis Garis Sci-Fi Atas & Bawah */
         .card-preview-body::before, .card-preview-body::after {
             content: '';
             position: absolute;
@@ -294,7 +337,6 @@
             line-height: 1.2;
         }
 
-        /* Desain Frame QR Code Glow Gambar 2 */
         #qrcode {
             width: 90px;
             height: 90px;
@@ -308,7 +350,6 @@
             border: 2px solid #4facfe;
         }
 
-        /* Action Buttons Area */
         .action-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -357,6 +398,8 @@
         <div id="status">Awaiting engine configuration...</div>
 
         <div id="viewerContainer">
+            <div class="spatial-bg-fx"></div>
+            <div class="spatial-pulse-fx"></div>
             <button class="btn-fullscreen" onclick="toggleFullscreen()">⛶</button>
             <model-viewer id="modelViewer" ar ar-modes="webxr scene-viewer quick-look" camera-controls touch-action="none" shadow-intensity="1" autoplay animation-name="*">
             </model-viewer>
@@ -450,16 +493,13 @@
             }
         });
 
-        // Trigger Tampilkan Paspor & Create QR
         renderBtn.addEventListener('click', () => {
             const qrContainer = document.getElementById('qrcode');
             qrContainer.innerHTML = ""; 
 
-            // Update isi text metadata kartu paspor secara dinamis
             document.getElementById('metaName').innerText = currentFileName;
             document.getElementById('metaSize').innerText = currentFileSize;
 
-            // Ambil screenshot instan model 3D untuk thumbnail paspor
             try {
                 const dataUrl = modelViewer.toDataURL("image/png");
                 cardPreviewArea.innerHTML = `<img src="${dataUrl}" alt="Asset Thumbnail">`;
@@ -467,10 +507,8 @@
                 cardPreviewArea.innerHTML = `<span style="color: var(--text-muted); font-size: 11px;">Asset Live</span>`;
             }
 
-            // Dapatkan URL aktif saat ini (Mendukung Vercel Deployment Link secara dinamis)
             const currentLiveUrl = window.location.href; 
 
-            // Membuat QR Code yang bersih & mudah discan (Correction level L)
             new QRCode(qrContainer, {
                 text: currentLiveUrl,
                 width: 74,
@@ -483,25 +521,21 @@
             document.getElementById('modalOverlay').classList.add('active');
         });
 
-        // FUNGSI SHARE LINK (MENYALIN LINK KE CLIPBOARD)
         function copyShareLink() {
             const currentLiveUrl = window.location.href;
             navigator.clipboard.writeText(currentLiveUrl).then(() => {
-                alert("Link berhasil disalin ke clipboard! Siap dibagikan.");
+                alert("Link berhasil disalin ke clipboard!");
             }).catch(err => {
                 console.error("Gagal menyalin link: ", err);
             });
         }
 
-        // FUNGSI SAVE TO PHOTOS (DOWNLOAD PNG KARTU)
         function saveToPhotos() {
             const cardElement = document.getElementById('passportCard');
-            
-            // Konfigurasi html2canvas agar kualitas gambar tajam & rapi
             html2canvas(cardElement, {
                 backgroundColor: null,
                 useCORS: true,
-                scale: 2 // Skala ditingkatkan agar hasil gambar jernih HD
+                scale: 2 
             }).then(canvas => {
                 const image = canvas.toDataURL("image/png");
                 const link = document.createElement('a');
@@ -509,7 +543,7 @@
                 link.href = image;
                 link.click();
             }).catch(error => {
-                console.error("Gagal menyimpan kartu paspor:", error);
+                console.error("Gagal menyimpan kartu:", error);
             });
         }
 
