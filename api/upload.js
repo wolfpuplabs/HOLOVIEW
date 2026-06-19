@@ -31,7 +31,7 @@ export default async function handler(req, res) {
       access: 'public',
       // PENTING: Ganti teks di bawah ini dengan TOKEN ASLI lu dari Vercel Blob!
       // Pastikan tanda kutip duanya (" ") jangan dihapus ya bang.
-      token: "vercel_blob_rw_QrNagGnNF2fmHOUl_syLqryuKNK6aQoBSXGPIvYCYcwexIr",
+      token: "vercel_blob_rw_ZdID2wEx0aggYllp_AL63LRHVtVk30fBN7xjfUokBA1s7cP",
     });
 
     // 3. Kembalikan response sukses beserta URL file 3D-nya
