@@ -105,7 +105,7 @@
 
         #status { font-size: 13px; margin-top: 14px; font-weight: 500; text-align: center; color: #71717a; }
 
-        /* --- VIEWER CONTAINER WITH SPATIAL ANIMATED FX --- */
+        /* Viewer Container Area */
         #viewerContainer {
             width: 100%;
             height: 440px;
@@ -119,7 +119,6 @@
             box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.9);
         }
 
-        /* FX Layer 1: Animasi Ambient Glow Spasial Bergerak */
         .spatial-bg-fx {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -133,7 +132,6 @@
             pointer-events: none;
         }
 
-        /* FX Layer 2: Efek Gelombang Denyut Energi Spasial */
         .spatial-pulse-fx {
             position: absolute;
             top: 50%; left: 50%;
@@ -150,10 +148,9 @@
             height: 100%; 
             background-color: transparent; 
             position: relative;
-            z-index: 1; /* Di atas lapisan animasi */
+            z-index: 1;
         }
 
-        /* Keyframes untuk Animasi Spasial */
         @keyframes spatialAmbient {
             0% { background-position: 0% 50%; }
             50% { background-position: 100% 50%; }
@@ -183,7 +180,7 @@
             z-index: 12;
         }
 
-        /* Modal Overlay */
+        /* Modal Area */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -211,7 +208,7 @@
             max-width: 380px;
         }
 
-        /* Card Passport Style */
+        /* Card Passport Capture Area */
         .ar-card-capture-area {
             width: 360px;
             height: 520px;
@@ -229,12 +226,7 @@
             box-shadow: 0 15px 45px rgba(79, 172, 254, 0.2);
         }
 
-        .card-header {
-            display: flex;
-            align-items: center;
-            gap: 14px;
-        }
-
+        .card-header { display: flex; align-items: center; gap: 14px; }
         .card-logo-box {
             width: 44px;
             height: 44px;
@@ -248,21 +240,8 @@
             color: #4facfe;
         }
 
-        .brand-text-main {
-            font-size: 22px;
-            font-weight: 800;
-            letter-spacing: 0.5px;
-            color: #ffffff;
-        }
-
-        .brand-text-sub {
-            font-size: 9px;
-            color: #8e8e9f;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            font-weight: 500;
-            margin-top: -2px;
-        }
+        .brand-text-main { font-size: 22px; font-weight: 800; letter-spacing: 0.5px; color: #ffffff; }
+        .brand-text-sub { font-size: 9px; color: #8e8e9f; letter-spacing: 1px; text-transform: uppercase; font-weight: 500; margin-top: -2px; }
 
         .card-preview-body {
             flex-grow: 1;
@@ -276,98 +255,40 @@
             position: relative;
         }
 
-        .card-preview-body img {
-            max-width: 95%;
-            max-height: 95%;
-            object-fit: contain;
-        }
+        .card-preview-body img { max-width: 95%; max-height: 95%; object-fit: contain; }
 
         .card-preview-body::before, .card-preview-body::after {
-            content: '';
-            position: absolute;
-            width: 20px; height: 20px;
-            border-color: rgba(79, 172, 254, 0.4);
-            border-style: solid;
-            pointer-events: none;
+            content: ''; position: absolute; width: 20px; height: 20px;
+            border-color: rgba(79, 172, 254, 0.4); border-style: solid; pointer-events: none;
         }
         .card-preview-body::before { top: 12px; left: 12px; border-width: 1px 0 0 1px; }
         .card-preview-body::after { bottom: 12px; right: 12px; border-width: 0 1px 1px 0; }
 
-        .card-bottom-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            margin-top: 4px;
-        }
+        .card-bottom-row { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 4px; }
 
         .metadata-box {
-            background: #11111a;
-            border-radius: 14px;
-            padding: 12px 16px;
-            width: 160px;
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            border: 1px solid #1c1c2e;
+            background: #11111a; border-radius: 14px; padding: 12px 16px;
+            width: 160px; display: flex; flex-direction: column; gap: 6px; border: 1px solid #1c1c2e;
         }
 
-        .meta-item {
-            display: flex;
-            font-size: 10px;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
+        .meta-item { display: flex; font-size: 10px; font-weight: 600; text-transform: uppercase; }
         .meta-label { color: #57576b; width: 55px; letter-spacing: 0.5px; }
         .meta-value { color: #ffffff; font-family: monospace; font-size: 11px; }
 
-        .qr-wrapper-zone {
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-            gap: 6px;
-        }
-
-        .scan-to-view-text {
-            font-size: 8px;
-            font-weight: 700;
-            color: #a5a5b4;
-            text-transform: uppercase;
-            letter-spacing: 0.8px;
-            text-align: right;
-            line-height: 1.2;
-        }
+        .qr-wrapper-zone { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+        .scan-to-view-text { font-size: 8px; font-weight: 700; color: #a5a5b4; text-transform: uppercase; letter-spacing: 0.8px; text-align: right; line-height: 1.2; }
 
         #qrcode {
-            width: 90px;
-            height: 90px;
-            background: #ffffff;
-            padding: 6px;
-            border-radius: 14px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            box-shadow: 0 0 15px rgba(0, 242, 254, 0.3);
-            border: 2px solid #4facfe;
+            width: 90px; height: 90px; background: #ffffff; padding: 6px; border-radius: 14px;
+            display: flex; justify-content: center; align-items: center;
+            box-shadow: 0 0 15px rgba(0, 242, 254, 0.3); border: 2px solid #4facfe;
         }
 
-        .action-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            width: 100%;
-        }
-
+        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
         .btn-action-secondary {
-            background: #13131a;
-            color: #ffffff;
-            border: 1px solid #27273a;
-            padding: 12px;
-            border-radius: 12px;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            text-align: center;
+            background: #13131a; color: #ffffff; border: 1px solid #27273a; padding: 12px;
+            border-radius: 12px; font-size: 13px; font-weight: 600; cursor: pointer;
+            transition: all 0.2s; text-align: center;
         }
         .btn-action-secondary:hover { background: #1c1c28; border-color: #4facfe; }
     </style>
@@ -377,7 +298,7 @@
     <div class="container">
         <div style="margin-bottom: 24px;">
             <h1 style="font-size: 22px; font-weight: 700; letter-spacing: -0.2px;">HOLOVIEW</h1>
-            <div style="color: var(--text-muted); font-size: 12px; margin-top: 2px;">Ecosystem Engine active. Assets deployed locally.</div>
+            <div style="color: var(--text-muted); font-size: 12px; margin-top: 2px;">Ecosystem Engine active. Serverless Engine Dynamic Sync.</div>
         </div>
         
         <div class="upload-grid">
@@ -408,7 +329,6 @@
 
     <div class="modal-overlay" id="modalOverlay">
         <div class="modal-content">
-            
             <div class="ar-card-capture-area" id="passportCard">
                 <div class="card-header">
                     <div class="card-logo-box">🧊</div>
@@ -426,11 +346,11 @@
                     <div class="metadata-box">
                         <div class="meta-item">
                             <span class="meta-label">Model</span>
-                            <span class="meta-value" id="metaName">DEER</span>
+                            <span class="meta-value" id="metaName">LOADED</span>
                         </div>
                         <div class="meta-item">
                             <span class="meta-label">Size</span>
-                            <span class="meta-value" id="metaSize">3.4 MB</span>
+                            <span class="meta-value" id="metaSize">-- MB</span>
                         </div>
                     </div>
                     
@@ -459,40 +379,79 @@
         const statusText = document.getElementById('status');
         const cardPreviewArea = document.getElementById('cardPreviewArea');
 
-        let currentFileSize = "0.0 MB";
-        let currentFileName = "UNKNOWN";
+        let base64GlbData = "";
+        let base64UsdzData = "";
+        let currentFileSize = "3.4 MB"; 
+        let currentFileName = "DEER";
+        let shareableConstructedUrl = window.location.href;
 
-        glbInput.addEventListener('change', (e) => {
-            if(e.target.files[0]) {
-                const file = e.target.files[0];
-                currentFileName = file.name.split('.')[0].toUpperCase();
-                currentFileSize = (file.size / (1024 * 1024)).toFixed(1) + " MB";
+        // CEK APAKAH USER MEMBUKA LINK EKSTERNAL DARI QR CODE SHARE
+        window.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const incomingModel = urlParams.get('model');
+            const incomingIos = urlParams.get('ios');
+            
+            if (incomingModel) {
+                statusText.innerText = "Synchronizing Shared AR Assets...";
+                statusText.style.color = "#4facfe";
                 
-                document.getElementById('glbName').innerText = file.name;
-                document.getElementById('glbBox').classList.add('has-file');
-                
-                const url = URL.createObjectURL(file);
-                modelViewer.src = url;
+                // Decode dan muat otomatis aset dari parameter url
+                modelViewer.src = "data:model/gltf-binary;base64," + incomingModel;
+                if(incomingIos) {
+                    modelViewer.setAttribute('ios-src', "data:model/vnd.usdz+zip;base64," + incomingIos);
+                }
                 
                 viewerContainer.style.display = 'block';
                 renderBtn.removeAttribute('disabled');
-                
-                statusText.innerText = "Local Engine Configured. Ready to Publish!";
+                statusText.innerText = "Shared Engine Synchronized & Active! 🚀";
                 statusText.style.color = "#10b981";
             }
         });
 
-        usdzInput.addEventListener('change', (e) => {
-            if(e.target.files[0]) {
-                const file = e.target.files[0];
-                document.getElementById('usdzName').innerText = file.name;
-                document.getElementById('usdzBox').classList.add('has-file');
-                
-                const usdzUrl = URL.createObjectURL(file);
-                modelViewer.setAttribute('ios-src', usdzUrl);
+        // PROSES UPLOAD ANDROID / WEB ENGINE
+        glbInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if(file) {
+                currentFileName = file.name.split('.')[0].toUpperCase();
+                currentFileSize = (file.size / (1024 * 1024)).toFixed(1) + " MB";
+                document.getElementById('glbName').innerText = file.name;
+                document.getElementById('glbBox').classList.add('has-file');
+
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const rawData = event.target.result;
+                    base64GlbData = btoa(String.fromCharCode(...new Uint8Array(rawData)));
+                    
+                    // Render preview lokal
+                    modelViewer.src = "data:model/gltf-binary;base64," + base64GlbData;
+                    viewerContainer.style.display = 'block';
+                    renderBtn.removeAttribute('disabled');
+                    
+                    statusText.innerText = "Local Engine Configured. Ready to Publish!";
+                    statusText.style.color = "#10b981";
+                };
+                reader.readAsArrayBuffer(file);
             }
         });
 
+        // PROSES UPLOAD IOS ENGINE
+        usdzInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if(file) {
+                document.getElementById('usdzName').innerText = file.name;
+                document.getElementById('usdzBox').classList.add('has-file');
+
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const rawData = event.target.result;
+                    base64UsdzData = btoa(String.fromCharCode(...new Uint8Array(rawData)));
+                    modelViewer.setAttribute('ios-src', "data:model/vnd.usdz+zip;base64," + base64UsdzData);
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        });
+
+        // GENERATE MANIFEST CARD PASSPORT & QR CODE
         renderBtn.addEventListener('click', () => {
             const qrContainer = document.getElementById('qrcode');
             qrContainer.innerHTML = ""; 
@@ -500,6 +459,7 @@
             document.getElementById('metaName').innerText = currentFileName;
             document.getElementById('metaSize').innerText = currentFileSize;
 
+            // Generate thumbnail instan untuk kartu passport
             try {
                 const dataUrl = modelViewer.toDataURL("image/png");
                 cardPreviewArea.innerHTML = `<img src="${dataUrl}" alt="Asset Thumbnail">`;
@@ -507,10 +467,20 @@
                 cardPreviewArea.innerHTML = `<span style="color: var(--text-muted); font-size: 11px;">Asset Live</span>`;
             }
 
-            const currentLiveUrl = window.location.href; 
+            // Konstruksi Link Injector Aset Dinamis
+            const baseUrl = window.location.origin + window.location.pathname;
+            if (base64GlbData) {
+                shareableConstructedUrl = `${baseUrl}?model=${encodeURIComponent(base64GlbData.substring(0, 50000))}`; 
+                if(base64UsdzData) {
+                    shareableConstructedUrl += `&ios=${encodeURIComponent(base64UsdzData.substring(0, 30000))}`;
+                }
+            } else {
+                shareableConstructedUrl = window.location.href;
+            }
 
+            // Create QR Code
             new QRCode(qrContainer, {
-                text: currentLiveUrl,
+                text: shareableConstructedUrl,
                 width: 74,
                 height: 74,
                 colorDark : "#000000",
@@ -522,9 +492,8 @@
         });
 
         function copyShareLink() {
-            const currentLiveUrl = window.location.href;
-            navigator.clipboard.writeText(currentLiveUrl).then(() => {
-                alert("Link berhasil disalin ke clipboard!");
+            navigator.clipboard.writeText(shareableConstructedUrl).then(() => {
+                alert("Link AR Portal berhasil disalin! Siap dishare ke perangkat lain.");
             }).catch(err => {
                 console.error("Gagal menyalin link: ", err);
             });
