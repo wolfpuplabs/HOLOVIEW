@@ -3,185 +3,488 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Asset Library & AR Viewer</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
-    <!-- Model Viewer CDN -->
-    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
+    <title>HOLOVIEW // Spatial AR Portal</title>
+    <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
     <style>
-        model-viewer {
-            width: 100%;
-            height: 500px;
-            background-color: #f3f4f6;
-            border-radius: 0.5rem;
+        :root {
+            --bg-pure-black: #050507;
+            --card-dark: #0b0b12;
+            --accent-spatial: #10b981; 
+            --text-main: #f4f4f5;
+            --text-muted: #71717a;
         }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-pure-black);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            padding: 20px;
+            overflow-x: hidden;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 650px;
+            background: rgba(11, 11, 15, 0.85);
+            backdrop-filter: blur(20px);
+            padding: 30px;
+            border-radius: 24px;
+            border: 1px solid #18181b;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+            z-index: 1;
+            position: relative;
+            margin-top: 40px;
+        }
+
+        .upload-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .upload-box {
+            border: 1px dashed #27272a;
+            padding: 24px 16px;
+            border-radius: 14px;
+            cursor: pointer;
+            background: #09090b;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            text-align: center;
+        }
+
+        .upload-box:hover { border-color: #3b82f6; }
+        .upload-box.has-file {
+            border-style: solid;
+            border-color: var(--accent-spatial);
+            background: rgba(16, 185, 129, 0.02);
+        }
+
+        .upload-box input { display: none; }
+        .box-title { font-size: 14px; font-weight: 600; margin-bottom: 4px; }
+        .box-sub { font-size: 11px; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        .btn-spatial {
+            background: var(--text-main);
+            color: var(--bg-pure-black);
+            border: none;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.2s;
+        }
+
+        .btn-spatial:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 5px 15px rgba(255,255,255,0.15);
+        }
+
+        .btn-spatial:disabled {
+            background: #18181b;
+            color: #52525b;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        #status { font-size: 13px; margin-top: 14px; font-weight: 500; text-align: center; color: #71717a; }
+
+        #viewerContainer {
+            width: 100%;
+            height: 440px;
+            background: #030305;
+            border-radius: 20px;
+            margin-top: 24px;
+            display: none;
+            position: relative;
+            border: 1px solid #141420;
+            overflow: hidden;
+            box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.9);
+        }
+
+        .spatial-bg-fx {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: 
+                radial-gradient(circle at 50% 50%, rgba(30, 45, 85, 0.45) 0%, transparent 55%),
+                radial-gradient(circle at 20% 30%, rgba(79, 172, 254, 0.15) 0%, transparent 40%),
+                radial-gradient(circle at 80% 70%, rgba(177, 86, 255, 0.12) 0%, transparent 45%);
+            background-size: 200% 200%;
+            animation: spatialAmbient 12s ease-in-out infinite alternate;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        .spatial-pulse-fx {
+            position: absolute;
+            top: 50%; left: 50%;
+            width: 250px; height: 250px;
+            background: radial-gradient(circle, rgba(79, 172, 254, 0.08) 0%, transparent 70%);
+            transform: translate(-50%, -50%) scale(0.8);
+            animation: spatialPulse 4s ease-in-out infinite alternate;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        model-viewer { 
+            width: 100%; height: 100%; background-color: transparent; position: relative; z-index: 1;
+        }
+
+        @keyframes spatialAmbient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 50% 100%; }
+        }
+
+        @keyframes spatialPulse {
+            0% { transform: translate(-50%, -50%) scale(0.85); opacity: 0.5; }
+            100% { transform: translate(-50%, -50%) scale(1.25); opacity: 1; }
+        }
+
+        .btn-fullscreen {
+            position: absolute; top: 16px; right: 16px; background: rgba(11, 11, 15, 0.6);
+            backdrop-filter: blur(8px); border: 1px solid #27272a; color: #ffffff;
+            width: 36px; height: 36px; border-radius: 50%; display: flex;
+            justify-content: center; align-items: center; cursor: pointer; z-index: 12;
+        }
+
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.94); backdrop-filter: blur(15px);
+            display: flex; justify-content: center; align-items: center; z-index: 999;
+            opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+            overflow-y: auto; padding: 20px 0;
+        }
+
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-content { display: flex; flex-direction: column; align-items: center; gap: 16px; width: 100%; max-width: 380px; }
+
+        .ar-card-capture-area {
+            width: 360px; height: 520px; background: #09090e; border-radius: 24px; padding: 24px;
+            display: flex; flex-direction: column; justify-content: space-between; position: relative;
+            border: 3px solid transparent;
+            background-image: linear-gradient(#09090e, #09090e), linear-gradient(135deg, #00f2fe 0%, #4facfe 30%, #b156ff 70%, #00f2fe 100%);
+            background-origin: border-box; background-clip: content-box, border-box;
+            box-shadow: 0 15px 45px rgba(79, 172, 254, 0.2);
+        }
+
+        .card-header { display: flex; align-items: center; gap: 14px; }
+        .card-logo-box {
+            width: 44px; height: 44px; border-radius: 12px; background: #13131f; border: 1px solid #26263b;
+            display: flex; justify-content: center; align-items: center; font-size: 20px; color: #4facfe;
+        }
+
+        .brand-text-main { font-size: 22px; font-weight: 800; letter-spacing: 0.5px; color: #ffffff; }
+        .brand-text-sub { font-size: 9px; color: #8e8e9f; letter-spacing: 1px; text-transform: uppercase; font-weight: 500; margin-top: -2px; }
+
+        .card-preview-body {
+            flex-grow: 1; margin: 12px 0; background: radial-gradient(circle at center, rgba(30, 40, 68, 0.3) 0%, rgba(5, 5, 8, 0.8) 70%);
+            border-radius: 16px; display: flex; justify-content: center; align-items: center; overflow: hidden; position: relative;
+        }
+        .card-preview-body img { max-width: 95%; max-height: 95%; object-fit: contain; }
+
+        .card-preview-body::before, .card-preview-body::after {
+            content: ''; position: absolute; width: 20px; height: 20px; border-color: rgba(79, 172, 254, 0.4); border-style: solid; pointer-events: none;
+        }
+        .card-preview-body::before { top: 12px; left: 12px; border-width: 1px 0 0 1px; }
+        .card-preview-body::after { bottom: 12px; right: 12px; border-width: 0 1px 1px 0; }
+
+        .card-bottom-row { display: flex; justify-content: space-between; align-items: flex-end; margin-top: 4px; }
+        .metadata-box {
+            background: #11111a; border-radius: 14px; padding: 12px 16px; width: 160px; display: flex; flex-direction: column; gap: 6px; border: 1px solid #1c1c2e;
+        }
+        .meta-item { display: flex; font-size: 10px; font-weight: 600; text-transform: uppercase; }
+        .meta-label { color: #57576b; width: 55px; letter-spacing: 0.5px; }
+        .meta-value { color: #ffffff; font-family: monospace; font-size: 11px; }
+
+        .qr-wrapper-zone { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+        .scan-to-view-text { font-size: 8px; font-weight: 700; color: #a5a5b4; text-transform: uppercase; letter-spacing: 0.8px; text-align: right; line-height: 1.2; }
+
+        #qrcode {
+            width: 90px; height: 90px; background: #ffffff; padding: 6px; border-radius: 14px; display: flex; justify-content: center; align-items: center;
+            box-shadow: 0 0 15px rgba(0, 242, 254, 0.3); border: 2px solid #4facfe;
+        }
+
+        .action-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
+        .btn-action-secondary {
+            background: #13131a; color: #ffffff; border: 1px solid #27273a; padding: 12px; border-radius: 12px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; text-align: center;
+        }
+        .btn-action-secondary:hover { background: #1c1c28; border-color: #4facfe; }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-900 min-h-screen">
-    <div class="max-w-4xl mx-auto px-4 py-8">
-        <header class="mb-8 text-center">
-            <h1 class="text-4xl font-extrabold text-gray-900 mb-2">📦 3D Asset Library</h1>
-            <p class="text-gray-600">Upload GLB/USDZ files, view them in AR, and share the link easily.</p>
-        </header>
+<body>
 
-        <!-- Upload Box -->
-        <div class="bg-white p-6 rounded-xl shadow-md border border-gray-200 mb-8">
-            <h2 class="text-xl font-bold mb-4 text-gray-800">Upload New 3D Model</h2>
-            <form id="uploadForm" class="space-y-4">
-                <div class="flex items-center justify-center w-full">
-                    <label class="flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100">
-                        <div class="flex flex-col items-center justify-center pt-5 pb-6">
-                            <svg class="w-8 h-8 mb-3 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
-                            <p class="mb-2 text-sm text-gray-500"><span class="font-semibold">Click to upload</span> or drag and drop</p>
-                            <p class="text-xs text-gray-500">GLB or USDZ formats only</p>
-                        </div>
-                        <input id="fileInput" type="file" accept=".glb,.usdz" class="hidden" required />
-                    </label>
-                </div>
-                <div id="fileInfo" class="text-sm text-gray-600 hidden text-center font-medium"></div>
-                <button type="submit" id="uploadBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-lg transition duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed">
-                    Upload to Vercel Blob
-                </button>
-            </form>
+    <div class="container">
+        <div style="margin-bottom: 24px;">
+            <h1 style="font-size: 22px; font-weight: 700; letter-spacing: -0.2px;">HOLOVIEW</h1>
+            <div style="color: var(--text-muted); font-size: 12px; margin-top: 2px;">Ecosystem Engine active. Secure Server-Side Sync.</div>
+        </div>
+        
+        <div class="upload-grid">
+            <div class="upload-box" onclick="document.getElementById('glbInput').click()" id="glbBox">
+                <div class="box-title">Android / Web Engine</div>
+                <div class="box-sub" id="glbName">Click to browse (.glb)</div>
+                <input type="file" id="glbInput" accept=".glb">
+            </div>
             
-            <!-- Progress/Status Message -->
-            <div id="statusMessage" class="mt-4 p-3 rounded-lg text-sm hidden text-center"></div>
+            <div class="upload-box" onclick="document.getElementById('usdzInput').click()" id="usdzBox">
+                <div class="box-title">iOS AR Engine</div>
+                <div class="box-sub" id="usdzName">Click to browse (.usdz)</div>
+                <input type="file" id="usdzInput" accept=".usdz">
+            </div>
         </div>
 
-        <!-- Preview & Share Box -->
-        <div id="previewContainer" class="bg-white p-6 rounded-xl shadow-md border border-gray-200 hidden">
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-4">
-                <div>
-                    <h2 class="text-xl font-bold text-gray-800">3D Preview & AR</h2>
-                    <p class="text-xs text-gray-500 mt-1">*Open this page on a mobile device to enable AR features.</p>
-                </div>
-                <div class="flex items-center gap-2 w-full md:w-auto">
-                    <input type="text" id="shareUrl" readonly class="bg-gray-100 border border-gray-300 text-gray-600 text-sm rounded-lg p-2 flex-1 md:w-64" />
-                    <button id="copyBtn" class="bg-gray-800 hover:bg-gray-900 text-white text-sm font-semibold py-2 px-4 rounded-lg transition duration-200 shrink-0">
-                        Copy Link
-                    </button>
-                </div>
-            </div>
+        <button class="btn-spatial" id="renderBtn" disabled>Publish Manifest & Get Card</button>
+        <div id="status">Awaiting engine configuration...</div>
 
-            <!-- Model Viewer Container -->
-            <div id="viewerWrapper" class="relative">
-                <!-- Dynamic model-viewer goes here -->
+        <div id="viewerContainer">
+            <div class="spatial-bg-fx"></div>
+            <div class="spatial-pulse-fx"></div>
+            <button class="btn-fullscreen" onclick="toggleFullscreen()">⛶</button>
+            <model-viewer id="modelViewer" ar ar-modes="webxr scene-viewer quick-look" camera-controls touch-action="none" shadow-intensity="1" autoplay animation-name="*">
+            </model-viewer>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-content">
+            <div class="ar-card-capture-area" id="passportCard">
+                <div class="card-header">
+                    <div class="card-logo-box">🧊</div>
+                    <div>
+                        <div class="brand-text-main">HOLOVIEW</div>
+                        <div class="brand-text-sub">WebAR Viewer by WolfPupLabs</div>
+                    </div>
+                </div>
+                
+                <div class="card-preview-body" id="cardPreviewArea">
+                    <span style="color: var(--text-muted); font-size: 12px;">Generating Preview...</span>
+                </div>
+                
+                <div class="card-bottom-row">
+                    <div class="metadata-box">
+                        <div class="meta-item">
+                            <span class="meta-label">Model</span>
+                            <span class="meta-value" id="metaName">LOADED</span>
+                        </div>
+                        <div class="meta-item">
+                            <span class="meta-label">Size</span>
+                            <span class="meta-value" id="metaSize">-- MB</span>
+                        </div>
+                    </div>
+                    
+                    <div class="qr-wrapper-zone">
+                        <div class="scan-to-view-text">Scan To View<br>AR Scene</div>
+                        <div id="qrcode"></div>
+                    </div>
+                </div>
             </div>
+            
+            <div class="action-grid">
+                <button class="btn-action-secondary" onclick="copyShareLink()">🔗 Copy Link</button>
+                <button class="btn-action-secondary" onclick="saveToPhotos()" style="background: #4facfe; color: #000; font-weight: 700; border: none;">📸 Save Photo</button>
+            </div>
+            
+            <button class="btn-spatial" style="background: #111118; color: #71717a; border: 1px solid #1c1c2e;" onclick="closeModal()">Dismiss Passport</button>
         </div>
     </div>
 
     <script>
-        const fileInput = document.getElementById('fileInput');
-        const fileInfo = document.getElementById('fileInfo');
-        const uploadForm = document.getElementById('uploadForm');
-        const uploadBtn = document.getElementById('uploadBtn');
-        const statusMessage = document.getElementById('statusMessage');
-        const previewContainer = document.getElementById('previewContainer');
-        const shareUrl = document.getElementById('shareUrl');
-        const copyBtn = document.getElementById('copyBtn');
-        const viewerWrapper = document.getElementById('viewerWrapper');
+        const glbInput = document.getElementById('glbInput');
+        const usdzInput = document.getElementById('usdzInput');
+        const renderBtn = document.getElementById('renderBtn');
+        const viewerContainer = document.getElementById('viewerContainer');
+        const modelViewer = document.getElementById('modelViewer');
+        const statusText = document.getElementById('status');
+        const cardPreviewArea = document.getElementById('cardPreviewArea');
 
-        // Show selected filename
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length > 0) {
-                fileInfo.textContent = `Selected file: ${e.target.files[0].name}`;
-                fileInfo.classList.remove('hidden');
-            } else {
-                fileInfo.classList.add('hidden');
-            }
-        });
+        let currentFileSize = "0.0 MB"; 
+        let currentFileName = "UNKNOWN";
+        let shareableConstructedUrl = window.location.href;
 
-        // Handle share URL logic from URL query parameter (for shareable links)
+        let glbPublicUrl = "";
+        let usdzPublicUrl = "";
+
+        // PEMBACA PARAMETER LINK KETIKA USER MEMBUKA QR CODE
         window.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
-            const modelParam = urlParams.get('model');
-            const nameParam = urlParams.get('name') || 'model.glb';
-            if (modelParam) {
-                showModel(modelParam, nameParam);
+            const modelUrl = urlParams.get('model');
+            const iosUrl = urlParams.get('ios');
+            const nameParam = urlParams.get('name');
+            const sizeParam = urlParams.get('size');
+            
+            if (modelUrl) {
+                statusText.innerText = "Synchronizing Shared AR Engine Elements...";
+                statusText.style.color = "#4facfe";
+                
+                modelViewer.src = decodeURIComponent(modelUrl);
+                if(iosUrl) {
+                    modelViewer.setAttribute('ios-src', decodeURIComponent(iosUrl));
+                }
+                
+                if (nameParam) currentFileName = decodeURIComponent(nameParam);
+                if (sizeParam) currentFileSize = decodeURIComponent(sizeParam);
+
+                viewerContainer.style.display = 'block';
+                renderBtn.removeAttribute('disabled');
+                statusText.innerText = "Engine Synchronized & Active! 🚀";
+                statusText.style.color = "#10b981";
             }
         });
 
-        uploadForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const file = fileInput.files[0];
-            if (!file) return;
+        // AMAN: PANGGILAN API ROUTE SECARA INTERNAL KE VERCEL BACKEND
+        async function uploadSecureAsset(file) {
+            const response = await fetch('/api/upload', {
+                method: "POST",
+                headers: { "X-Filename": file.name },
+                body: file
+            });
 
-            uploadBtn.disabled = true;
-            uploadBtn.textContent = 'Uploading...';
-            showStatus('Uploading file to Vercel Blob, please wait...', 'bg-blue-50 text-blue-700 border border-blue-200');
+            if (!response.ok) {
+                throw new Error("Gagal mengunggah file ke Vercel Blob via Secure API.");
+            }
+
+            const data = await response.json();
+            return data.url; 
+        }
+
+        glbInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if(file) {
+                try {
+                    statusText.innerText = "Processing & Deploying GLB to Cloud Storage...";
+                    statusText.style.color = "#4facfe";
+                    renderBtn.setAttribute('disabled', 'true');
+
+                    currentFileName = file.name.split('.')[0].toUpperCase();
+                    currentFileSize = (file.size / (1024 * 1024)).toFixed(1) + " MB";
+                    document.getElementById('glbName').innerText = file.name;
+                    document.getElementById('glbBox').classList.add('has-file');
+
+                    glbPublicUrl = await uploadSecureAsset(file);
+                    
+                    modelViewer.src = glbPublicUrl;
+                    viewerContainer.style.display = 'block';
+                    renderBtn.removeAttribute('disabled');
+                    
+                    statusText.innerText = "Cloud Engine Configured. Ready to Publish!";
+                    statusText.style.color = "#10b981";
+                } catch (err) {
+                    alert("Error: " + err.message);
+                    statusText.innerText = "Configuration Error.";
+                    statusText.style.color = "#ef4444";
+                }
+            }
+        });
+
+        usdzInput.addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if(file) {
+                try {
+                    statusText.innerText = "Deploying iOS Asset...";
+                    statusText.style.color = "#4facfe";
+                    
+                    document.getElementById('usdzName').innerText = file.name;
+                    document.getElementById('usdzBox').classList.add('has-file');
+
+                    usdzPublicUrl = await uploadSecureAsset(file);
+                    modelViewer.setAttribute('ios-src', usdzPublicUrl);
+
+                    statusText.innerText = "iOS Engine Pipeline Synchronized!";
+                    statusText.style.color = "#10b981";
+                } catch (err) {
+                    alert("iOS Upload Error: " + err.message);
+                }
+            }
+        });
+
+        renderBtn.addEventListener('click', () => {
+            const qrContainer = document.getElementById('qrcode');
+            qrContainer.innerHTML = ""; 
+
+            document.getElementById('metaName').innerText = currentFileName;
+            document.getElementById('metaSize').innerText = currentFileSize;
 
             try {
-                const response = await fetch(`/api/upload?filename=${encodeURIComponent(file.name)}`, {
-                    method: 'POST',
-                    body: file
+                const dataUrl = modelViewer.toDataURL("image/png");
+                cardPreviewArea.innerHTML = `<img src="${dataUrl}" alt="Asset Thumbnail">`;
+            } catch (err) {
+                cardPreviewArea.innerHTML = `<span style="color: var(--text-muted); font-size: 11px;">Asset Live</span>`;
+            }
+
+            const baseUrl = window.location.origin + window.location.pathname;
+            
+            shareableConstructedUrl = `${baseUrl}?model=${encodeURIComponent(glbPublicUrl)}&name=${encodeURIComponent(currentFileName)}&size=${encodeURIComponent(currentFileSize)}`;
+            if(usdzPublicUrl) {
+                shareableConstructedUrl += `&ios=${encodeURIComponent(usdzPublicUrl)}`;
+            }
+
+            new QRCode(qrContainer, {
+                text: shareableConstructedUrl,
+                width: 74,
+                height: 74,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.L
+            });
+
+            document.getElementById('modalOverlay').classList.add('active');
+        });
+
+        function copyShareLink() {
+            navigator.clipboard.writeText(shareableConstructedUrl).then(() => {
+                alert("Link AR Portal berhasil disalin!");
+            }).catch(err => {
+                console.error("Gagal menyalin link: ", err);
+            });
+        }
+
+        function saveToPhotos() {
+            const cardElement = document.getElementById('passportCard');
+            html2canvas(cardElement, {
+                backgroundColor: null,
+                useCORS: true,
+                scale: 2 
+            }).then(canvas => {
+                const image = canvas.toDataURL("image/png");
+                const link = document.createElement('a');
+                link.download = `HOLOVIEW_PASSPORT_${currentFileName}.png`;
+                link.href = image;
+                link.click();
+            }).catch(error => {
+                console.error("Gagal menyimpan kartu:", error);
+            });
+        }
+
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) {
+                viewerContainer.requestFullscreen().catch(err => {
+                    console.log(`Error: ${err.message}`);
                 });
-
-                if (!response.ok) {
-                    throw new Error('Upload failed server side');
-                }
-
-                const data = await response.json();
-                
-                // Create shareable web app link instead of raw asset download link
-                const currentUrl = new URL(window.location.href);
-                currentUrl.searchParams.set('model', data.url);
-                currentUrl.searchParams.set('name', file.name);
-                const appShareLink = currentUrl.toString();
-
-                showStatus('Upload successful!', 'bg-green-50 text-green-700 border border-green-200');
-                showModel(data.url, file.name, appShareLink);
-            } catch (error) {
-                console.error(error);
-                showStatus('Error uploading file. Make sure BLOB_READ_WRITE_TOKEN is configured in Vercel.', 'bg-red-50 text-red-700 border border-red-200');
-            } finally {
-                uploadBtn.disabled = false;
-                uploadBtn.textContent = 'Upload to Vercel Blob';
+            } else {
+                document.exitFullscreen();
             }
-        });
-
-        function showStatus(msg, classes) {
-            statusMessage.className = `mt-4 p-3 rounded-lg text-sm text-center ${classes}`;
-            statusMessage.textContent = msg;
-            statusMessage.classList.remove('hidden');
         }
 
-        function showModel(modelUrl, filename, appShareLink = window.location.href) {
-            previewContainer.classList.remove('hidden');
-            shareUrl.value = appShareLink;
-            
-            // Clear old viewer
-            viewerWrapper.innerHTML = '';
-
-            // Build modern model-viewer
-            const viewer = document.createElement('model-viewer');
-            viewer.setAttribute('src', modelUrl);
-            viewer.setAttribute('alt', 'A 3D model uploaded by user');
-            viewer.setAttribute('ar', '');
-            viewer.setAttribute('ar-modes', 'webxr scene-viewer quick-look');
-            viewer.setAttribute('camera-controls', '');
-            viewer.setAttribute('auto-rotate', '');
-            viewer.setAttribute('shadow-intensity', '1');
-            
-            // Handle iOS USDZ quick look if it's a USDZ file
-            if (filename.toLowerCase().endsWith('.usdz')) {
-                viewer.setAttribute('ios-src', modelUrl);
-            }
-
-            viewerWrapper.appendChild(viewer);
-            previewContainer.scrollIntoView({ behavior: 'smooth' });
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.remove('active');
         }
-
-        copyBtn.addEventListener('click', () => {
-            shareUrl.select();
-            navigator.clipboard.writeText(shareUrl.value);
-            const originalText = copyBtn.textContent;
-            copyBtn.textContent = 'Copied!';
-            copyBtn.classList.replace('bg-gray-800', 'bg-green-600');
-            setTimeout(() => {
-                copyBtn.textContent = originalText;
-                copyBtn.classList.replace('bg-green-600', 'bg-gray-800');
-            }, 2000);
-        });
     </script>
 </body>
 </html>
