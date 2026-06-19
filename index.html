@@ -6,15 +6,14 @@
     <title>HOLOVIEW // Spatial AR Portal</title>
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     
     <style>
         :root {
             --bg-pure-black: #050507;
             --card-dark: #0b0b0f;
             --border-glow: #1f1f2e;
-            --accent-spatial: #3b82f6;
-            --accent-glow: rgba(59, 130, 246, 0.2);
+            --accent-spatial: #10b981; /* Green border when active like img 2 */
+            --accent-glow: rgba(16, 185, 129, 0.1);
             --text-main: #f4f4f5;
             --text-muted: #71717a;
         }
@@ -45,27 +44,11 @@
             backdrop-filter: blur(20px);
             padding: 30px;
             border-radius: 24px;
-            border: 1px solid var(--border-glow);
+            border: 1px solid #18181b;
             box-shadow: 0 20px 40px rgba(0,0,0,0.8);
             z-index: 1;
             position: relative;
             margin-top: 40px;
-        }
-
-        h1 {
-            font-size: 26px;
-            font-weight: 800;
-            letter-spacing: -0.5px;
-            margin-bottom: 6px;
-            background: linear-gradient(to right, #ffffff, #a1a1aa);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .subtitle {
-            color: var(--text-muted);
-            font-size: 13px;
-            margin-bottom: 24px;
         }
 
         .upload-grid {
@@ -86,14 +69,13 @@
         }
 
         .upload-box:hover {
-            border-color: var(--accent-spatial);
-            box-shadow: 0 0 15px var(--accent-glow);
+            border-color: #3b82f6;
         }
 
         .upload-box.has-file {
             border-style: solid;
-            border-color: #10b981;
-            background: rgba(16, 185, 129, 0.03);
+            border-color: var(--accent-spatial);
+            background: rgba(16, 185, 129, 0.02);
         }
 
         .upload-box input { display: none; }
@@ -123,35 +105,22 @@
             color: #52525b;
             cursor: not-allowed;
             transform: none;
-            box-shadow: none;
         }
 
-        #status { font-size: 13px; margin-top: 14px; font-weight: 500; text-align: center; }
+        #status { font-size: 13px; margin-top: 14px; font-weight: 500; text-align: center; color: #3b82f6; }
 
-        #timerBadge {
-            display: none;
-            margin: 16px auto 0 auto;
-            background: rgba(239, 68, 110, 0.1);
-            color: #f43f5e;
-            border: 1px solid rgba(239, 68, 110, 0.2);
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 600;
-            width: fit-content;
-        }
-
+        /* Viewer Container: Pure Black dengan Spatial Vibes Glow */
         #viewerContainer {
             width: 100%;
-            height: 400px;
-            background: radial-gradient(circle at center, rgba(59, 130, 246, 0.12) 0%, rgba(139, 92, 246, 0.04) 40%, #000000 80%);
-            border-radius: 16px;
+            height: 440px;
+            background: radial-gradient(circle at center, rgba(30, 30, 50, 0.4) 0%, rgba(10, 10, 15, 0.9) 60%, #050507 100%);
+            border-radius: 20px;
             margin-top: 24px;
             display: none;
             position: relative;
-            border: 1px solid #18181b;
+            border: 1px solid #1a1a26;
             overflow: hidden;
-            box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.9);
+            box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.9);
         }
 
         model-viewer {
@@ -160,57 +129,31 @@
             background-color: transparent;
         }
 
-        .ar-fullscreen-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 10;
-        }
-
+        /* Fullscreen & AR Icon Overrides */
         .btn-fullscreen {
             position: absolute;
             top: 16px;
             right: 16px;
-            background: rgba(11, 11, 15, 0.85);
-            border: 1px solid var(--border-glow);
+            background: rgba(11, 11, 15, 0.6);
+            backdrop-filter: blur(8px);
+            border: 1px solid #27272a;
             color: #ffffff;
-            width: 40px;
-            height: 40px;
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
             display: flex;
             justify-content: center;
             align-items: center;
             cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-            transition: all 0.2s ease;
-            pointer-events: auto;
             z-index: 12;
         }
 
-        .btn-fullscreen:hover {
-            background: #ffffff;
-            color: #000000;
-            transform: scale(1.05);
-        }
-
-        #viewerContainer:fullscreen {
-            width: 100vw !important;
-            height: 100vh !important;
-            max-width: 100vw !important;
-            border-radius: 0 !important;
-            border: none !important;
-            margin: 0 !important;
-            background: #000000 !important;
-        }
-
+        /* Modal Layout */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            backdrop-filter: blur(12px);
+            background: rgba(0, 0, 0, 0.92);
+            backdrop-filter: blur(15px);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -218,7 +161,6 @@
             opacity: 0;
             pointer-events: none;
             transition: opacity 0.3s ease;
-            padding: 20px;
         }
 
         .modal-overlay.active {
@@ -234,149 +176,116 @@
         }
 
         .ar-card-capture-area {
-            width: 360px;
-            height: 540px;
+            width: 350px;
+            height: 500px;
             background: #0b0b11;
             border-radius: 20px;
             padding: 24px;
-            position: relative;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            border: 2px solid #2a2a3a;
-            box-shadow: 0 0 35px rgba(59, 130, 246, 0.15);
-            overflow: hidden;
+            border: 1px solid #222235;
+            box-shadow: 0 0 40px rgba(59, 130, 246, 0.1);
         }
 
         .card-header {
             display: flex;
             align-items: center;
             gap: 12px;
-            border-bottom: 1px solid #1a1a26;
-            padding-bottom: 14px;
+            border-bottom: 1px solid #161622;
+            padding-bottom: 12px;
         }
 
         .card-logo-box {
-            width: 42px;
-            height: 42px;
-            border-radius: 10px;
-            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+            font-size: 20px;
         }
 
         .card-title-main {
-            font-size: 20px;
-            font-weight: 900;
-            letter-spacing: 1.5px;
+            font-size: 18px;
+            font-weight: 800;
+            letter-spacing: 1px;
             color: #ffffff;
-            background: linear-gradient(to right, #ffffff, #a5b4fc);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
         }
 
         .card-title-sub {
             font-size: 10px;
-            color: #6366f1;
+            color: #3b82f6;
             text-transform: uppercase;
-            letter-spacing: 1px;
             font-weight: 700;
-            margin-top: 1px;
         }
 
         .card-preview-body {
             flex-grow: 1;
-            margin: 20px 0;
-            background: #06060a;
-            border: 1px solid #151522;
-            border-radius: 14px;
+            margin: 16px 0;
+            background: #050508;
+            border: 1px solid #141420;
+            border-radius: 12px;
             display: flex;
             justify-content: center;
             align-items: center;
-            position: relative;
-            overflow: hidden;
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.6);
+            color: var(--text-muted);
+            font-size: 13px;
         }
 
-        .card-preview-body img {
-            max-width: 95%;
-            max-height: 95%;
-            object-fit: contain;
-            filter: drop-shadow(0 8px 16px rgba(0,0,0,0.5));
-            z-index: 2;
-        }
-
-        /* FIXED & COMPLETED CARD FOOTER STYLES */
         .card-footer {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-top: 1px solid #1a1a26;
-            padding-top: 14px;
+            border-top: 1px solid #161622;
+            padding-top: 12px;
         }
 
-        .card-meta {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
+        .card-meta-title { font-size: 12px; color: #ffffff; font-weight: 600; margin-bottom: 2px;}
+        .card-meta-desc { font-size: 10px; color: var(--text-muted); }
 
-        .card-meta-title {
-            font-size: 12px;
-            color: #ffffff;
-            font-weight: 600;
-        }
-
-        .card-meta-desc {
-            font-size: 10px;
-            color: var(--text-muted);
-        }
-
+        /* QR Code Container agar bersih & kontras tinggi */
         #qrcode {
-            width: 64px;
-            height: 64px;
+            width: 68px;
+            height: 68px;
             background: #ffffff;
-            padding: 4px;
-            border-radius: 6px;
+            padding: 5px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h1>HOLOVIEW</h1>
-        <div class="subtitle">Spatial AR Portal / Upload GLB or USDZ Asset</div>
+        <div style="margin-bottom: 24px;">
+            <h1 style="font-size: 22px; font-weight: 700; letter-spacing: -0.2px;">HOLOVIEW</h1>
+            <div style="color: var(--text-muted); font-size: 12px; margin-top: 2px;">Ecosystem Engine active. Assets deployed locally.</div>
+        </div>
         
         <div class="upload-grid">
             <div class="upload-box" onclick="document.getElementById('glbInput').click()" id="glbBox">
-                <div class="box-title">GLB Model</div>
+                <div class="box-title">Android / Web Engine</div>
                 <div class="box-sub" id="glbName">Click to browse (.glb)</div>
                 <input type="file" id="glbInput" accept=".glb">
             </div>
             
             <div class="upload-box" onclick="document.getElementById('usdzInput').click()" id="usdzBox">
-                <div class="box-title">USDZ Model (iOS)</div>
+                <div class="box-title">iOS AR Engine</div>
                 <div class="box-sub" id="usdzName">Click to browse (.usdz)</div>
                 <input type="file" id="usdzInput" accept=".usdz">
             </div>
         </div>
 
-        <button class="btn-spatial" id="renderBtn" disabled>Launch Spatial Portal</button>
-        <div id="status">Ready for asset input.</div>
-        <div id="timerBadge">Session Active</div>
+        <button class="btn-spatial" id="renderBtn" disabled>Publish Manifest & Get Card</button>
+        <div id="status">Awaiting engine configuration...</div>
 
-        <div id="viewerContainer" id="portalViewer">
+        <div id="viewerContainer">
+            <button class="btn-fullscreen" onclick="toggleFullscreen()">⛶</button>
             <model-viewer id="modelViewer" ar ar-modes="webxr scene-viewer quick-look" camera-controls touch-action="none" shadow-intensity="1">
-                <button class="btn-fullscreen" onclick="toggleFullscreen()" slot="hotspot-fullscreen">⛶</button>
             </model-viewer>
         </div>
     </div>
 
     <div class="modal-overlay" id="modalOverlay">
         <div class="modal-content">
-            <div class="ar-card-capture-area" id="captureArea">
+            <div class="ar-card-capture-area">
                 <div class="card-header">
                     <div class="card-logo-box">🌀</div>
                     <div>
@@ -385,73 +294,85 @@
                     </div>
                 </div>
                 <div class="card-preview-body">
-                    <span style="color: #333; font-size: 12px;">Asset Loaded Successfully</span>
+                    <span>Asset Synchronized ✅</span>
                 </div>
                 <div class="card-footer">
                     <div class="card-meta">
-                        <div class="card-meta-title">AR Experience</div>
-                        <div class="card-meta-desc">Scan to view object in your room</div>
+                        <div class="card-meta-title">Spatial AR Asset</div>
+                        <div class="card-meta-desc">Scan to view in your room</div>
                     </div>
                     <div id="qrcode"></div>
                 </div>
             </div>
-            <button class="btn-spatial" style="max-width: 360px;" onclick="closeModal()">Dismiss Passport</button>
+            <button class="btn-spatial" style="max-width: 350px; background: #18181b; color: #fff; border: 1px solid #27272a;" onclick="closeModal()">Dismiss Passport</button>
         </div>
     </div>
 
     <script>
-        // Simple client side hook to light up the UI on file loads
         const glbInput = document.getElementById('glbInput');
         const usdzInput = document.getElementById('usdzInput');
         const renderBtn = document.getElementById('renderBtn');
         const viewerContainer = document.getElementById('viewerContainer');
         const modelViewer = document.getElementById('modelViewer');
+        const statusText = document.getElementById('status');
 
-        function updateFormState() {
-            if (glbInput.files.length > 0) {
-                renderBtn.removeAttribute('disabled');
-                document.getElementById('status').innerText = "Assets synchronized. Click Launch.";
-            }
-        }
-
+        // Otomatis Render Preview saat File GLB di-upload
         glbInput.addEventListener('change', (e) => {
             if(e.target.files[0]) {
-                document.getElementById('glbName').innerText = e.target.files[0].name;
+                const file = e.target.files[0];
+                document.getElementById('glbName').innerText = file.name;
                 document.getElementById('glbBox').classList.add('has-file');
-                updateFormState();
+                
+                // Load langsung ke model viewer
+                const url = URL.createObjectURL(file);
+                modelViewer.src = url;
+                
+                // Tampilkan Container 3D
+                viewerContainer.style.display = 'block';
+                
+                // Aktifkan tombol publish
+                renderBtn.removeAttribute('disabled');
+                statusText.innerText = "Local Engine Configured. Ready to Publish!";
+                statusText.style.color = "#3b82f6";
             }
         });
 
         usdzInput.addEventListener('change', (e) => {
             if(e.target.files[0]) {
-                document.getElementById('usdzName').innerText = e.target.files[0].name;
+                const file = e.target.files[0];
+                document.getElementById('usdzName').innerText = file.name;
                 document.getElementById('usdzBox').classList.add('has-file');
+                
+                const usdzUrl = URL.createObjectURL(file);
+                modelViewer.setAttribute('ios-src', usdzUrl);
             }
         });
 
+        // Trigger Tombol Publish untuk memunculkan Card & QR Code
         renderBtn.addEventListener('click', () => {
-            const file = glbInput.files[0];
-            if (file) {
-                const url = URL.createObjectURL(file);
-                modelViewer.src = url;
-                
-                // If iOS file is ready, bundle it into model-viewer local src
-                if(usdzInput.files[0]) {
-                    const usdzUrl = URL.createObjectURL(usdzInput.files[0]);
-                    modelViewer.setAttribute('ios-src', usdzUrl);
-                }
+            const qrContainer = document.getElementById('qrcode');
+            qrContainer.innerHTML = ""; // Reset QR Code lama
 
-                viewerContainer.style.display = 'block';
-                document.getElementById('timerBadge').style.display = 'block';
-                document.getElementById('status').innerText = "Portal Active.";
-            }
+            // Menggunakan manifest link tiruan atau url object sementara yang valid
+            const dummyShareUrl = window.location.href; 
+
+            // Konfigurasi QR Code yang tidak padat agar sangat mudah discan
+            new QRCode(qrContainer, {
+                text: dummyShareUrl,
+                width: 58,
+                height: 58,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.L // Level L = Kotak modul renggang/tidak padat
+            });
+
+            document.getElementById('modalOverlay').classList.add('active');
         });
 
         function toggleFullscreen() {
-            const container = document.getElementById('viewerContainer');
             if (!document.fullscreenElement) {
-                container.requestFullscreen().catch(err => {
-                    console.log(`Error going fullscreen: ${err.message}`);
+                viewerContainer.requestFullscreen().catch(err => {
+                    console.log(`Error: ${err.message}`);
                 });
             } else {
                 document.exitFullscreen();
