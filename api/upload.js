@@ -2,43 +2,25 @@ import { put } from '@vercel/blob';
 
 export const config = {
   api: {
-    bodyParser: false, // Wajib false biar file .glb/.usdz gak rusak saat di-upload
+    bodyParser: false, // Wajib disetel false agar file 3D berukuran megabyte bisa di-stream
   },
 };
 
-export default async function handler(req, res) {
-  // Hanya menerima request POST
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' });
-  }
-
-  const filename = req.query.filename;
-
-  if (!filename) {
-    return res.status(400).json({ error: 'Missing filename parameter' });
+export default async function handler(request, response) {
+  if (request.method !== 'POST') {
+    return response.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    // 1. Kumpulin potongan data (stream) file jadi Buffer utuh
-    const chunks = [];
-    for await (const chunk of req) {
-      chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
-    }
-    const fileBuffer = Buffer.concat(chunks);
-
-    // 2. Upload langsung ke Vercel Blob dengan menembak token secara manual
-    const blob = await put(filename, fileBuffer, {
+    const filename = request.headers['x-filename'] || 'asset.glb';
+    
+    // Otomatis membaca BLOB_READ_WRITE_TOKEN yang sudah terkoneksi di Dashboard Vercel kamu
+    const blob = await put(filename, request, {
       access: 'public',
-      // PENTING: Ganti teks di bawah ini dengan TOKEN ASLI lu dari Vercel Blob!
-      // Pastikan tanda kutip duanya (" ") jangan dihapus ya bang.
-      token: "vercel_blob_rw_DW3PeSQBB9lRlBSa_GbQu9wnSMPtdUUIVS71ewDCU9bPEHZ",
     });
 
-    // 3. Kembalikan response sukses beserta URL file 3D-nya
-    return res.status(200).json(blob);
+    return response.status(200).json(blob);
   } catch (error) {
-    // Menampilkan error asli di console log Vercel jika gagal
-    console.error("UPLOAD ERROR DETAILS:", error.message);
-    return res.status(500).json({ error: error.message });
+    return response.status(500).json({ error: error.message });
   }
 }
