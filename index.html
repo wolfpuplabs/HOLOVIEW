@@ -233,7 +233,7 @@
     <div class="container">
         <div style="margin-bottom: 24px;">
             <h1 style="font-size: 22px; font-weight: 700; letter-spacing: -0.2px;">HOLOVIEW</h1>
-            <div style="color: var(--text-muted); font-size: 12px; margin-top: 2px;">Ecosystem Engine active. Direct Edge Sync Portal.</div>
+            <div style="color: var(--text-muted); font-size: 12px; margin-top: 2px;">Ecosystem Engine active. Vercel Blob Client Direct Connection.</div>
         </div>
         
         <div class="upload-grid">
@@ -306,6 +306,9 @@
     </div>
 
     <script>
+        // --- MASUKKAN TOKEN VERCEL BLOB KAMU DI SINI ---
+        const VERCEL_BLOB_TOKEN = "vercel_blob_rw_DW3PeSQBB9lRlBSa_GbQu9wnSMPtdUUIVS71ewDCU9bPEHZ"; 
+
         const glbInput = document.getElementById('glbInput');
         const usdzInput = document.getElementById('usdzInput');
         const renderBtn = document.getElementById('renderBtn');
@@ -321,7 +324,7 @@
         let glbPublicUrl = "";
         let usdzPublicUrl = "";
 
-        // PEMBACA LINK PARAMETER UTAMA (Aman Dari Stuck Pada Sisi User)
+        // SYNC KETIKA USER LAIN MEMBUKA QR CODE LINK
         window.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
             const modelUrl = urlParams.get('model');
@@ -348,33 +351,35 @@
             }
         });
 
-        // FALLBACK HANDLER JIKA ENDPOINT INTERNAL /API TIDAK DITEMUKAN
-        async function uploadAssetData(file) {
-            try {
-                // Mencoba memanggil endpoint Vercel Blob internal
-                const response = await fetch('/api/upload', {
-                    method: "POST",
-                    headers: { "X-Filename": file.name },
-                    body: file
-                });
-                if (response.ok) {
-                    const data = await response.json();
-                    return data.url;
-                }
-            } catch (e) {
-                console.log("Internal API bypass activated.");
+        // FUNGSI UTAMA DIRECT UPLOAD KE VERCEL BLOB API REST
+        async function uploadDirectToVercelBlob(file) {
+            const cleanFileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g, "_")}`;
+            
+            // Endpoint Vercel Blob Storage Global API
+            const targetUrl = `https://blob.vercel-storage.com/${cleanFileName}`;
+
+            const response = await fetch(targetUrl, {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${VERCEL_BLOB_TOKEN}`,
+                    "x-api-version": "1"
+                },
+                body: file
+            });
+
+            if (!response.ok) {
+                throw new Error("Gagal mengunggah file langsung ke Vercel Blob Cloud.");
             }
 
-            // Jika /api/upload tidak merespon/404, fallback otomatis membuat Object URL 
-            // agar pratinjau lokal pembuat tetap menyala & tidak mengalami kebuntuan
-            return URL.createObjectURL(file);
+            const data = await response.json();
+            return data.url; // Mengembalikan secure public link permanen
         }
 
         glbInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if(file) {
                 try {
-                    statusText.innerText = "Configuring Engine Pipelines...";
+                    statusText.innerText = "Uploading GLB to Vercel Spatial Engine...";
                     statusText.style.color = "#4facfe";
                     renderBtn.setAttribute('disabled', 'true');
 
@@ -383,15 +388,17 @@
                     document.getElementById('glbName').innerText = file.name;
                     document.getElementById('glbBox').classList.add('has-file');
 
-                    glbPublicUrl = await uploadAssetData(file);
+                    // Langsung bypass upload aman dari client-side
+                    glbPublicUrl = await uploadDirectToVercelBlob(file);
                     
                     modelViewer.src = glbPublicUrl;
                     viewerContainer.style.display = 'block';
                     renderBtn.removeAttribute('disabled');
                     
-                    statusText.innerText = "Local Engine Configured. Ready to Publish!";
+                    statusText.innerText = "Vercel Engine Configured. Ready to Publish!";
                     statusText.style.color = "#10b981";
                 } catch (err) {
+                    alert("Error: " + err.message);
                     statusText.innerText = "Configuration Error.";
                     statusText.style.color = "#ef4444";
                 }
@@ -402,12 +409,19 @@
             const file = e.target.files[0];
             if(file) {
                 try {
+                    statusText.innerText = "Uploading iOS Asset...";
+                    statusText.style.color = "#4facfe";
+                    
                     document.getElementById('usdzName').innerText = file.name;
                     document.getElementById('usdzBox').classList.add('has-file');
-                    usdzPublicUrl = await uploadAssetData(file);
+
+                    usdzPublicUrl = await uploadDirectToVercelBlob(file);
                     modelViewer.setAttribute('ios-src', usdzPublicUrl);
+
+                    statusText.innerText = "iOS Engine Pipeline Synchronized!";
+                    statusText.style.color = "#10b981";
                 } catch (err) {
-                    console.error(err);
+                    alert("iOS Upload Error: " + err.message);
                 }
             }
         });
@@ -426,9 +440,8 @@
                 cardPreviewArea.innerHTML = `<span style="color: var(--text-muted); font-size: 11px;">Asset Live</span>`;
             }
 
+            // Menyematkan link file CDN Vercel Blob asli yang ringkas ke url params
             const baseUrl = window.location.origin + window.location.pathname;
-            
-            // Mengemas string URL parameter agar jika bertipe blob url tidak memutus koneksi browser
             shareableConstructedUrl = `${baseUrl}?model=${encodeURIComponent(glbPublicUrl)}&name=${encodeURIComponent(currentFileName)}&size=${encodeURIComponent(currentFileSize)}`;
             if(usdzPublicUrl) {
                 shareableConstructedUrl += `&ios=${encodeURIComponent(usdzPublicUrl)}`;
@@ -448,7 +461,7 @@
 
         function copyShareLink() {
             navigator.clipboard.writeText(shareableConstructedUrl).then(() => {
-                alert("Link AR Portal berhasil disalin!");
+                alert("Link AR Portal aman berhasil disalin!");
             }).catch(err => {
                 console.error("Gagal menyalin link: ", err);
             });
