@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Spatial AR Portal</title>
+    <title>HOLOVIEW // Spatial AR Portal</title>
     <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.5.0/model-viewer.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     
     <style>
         :root {
-            --bg-pure-black: #000000;
-            --card-dark: #0a0a0c;
-            --border-glow: #1e1e24;
+            --bg-pure-black: #050507;
+            --card-dark: #0b0b0f;
+            --border-glow: #1f1f2e;
             --accent-spatial: #3b82f6;
-            --accent-glow: rgba(59, 130, 246, 0.25);
+            --accent-glow: rgba(59, 130, 246, 0.2);
             --text-main: #f4f4f5;
             --text-muted: #71717a;
         }
@@ -38,37 +38,26 @@
             overflow-x: hidden;
         }
 
-        body::before {
-            content: '';
-            position: absolute;
-            width: 400px;
-            height: 400px;
-            background: radial-gradient(circle, var(--accent-glow) 0%, rgba(0,0,0,0) 70%);
-            top: 15%;
-            left: 20%;
-            z-index: 0;
-            pointer-events: none;
-        }
-
         .container {
             width: 100%;
             max-width: 650px;
-            background: rgba(10, 10, 12, 0.8);
+            background: rgba(11, 11, 15, 0.85);
             backdrop-filter: blur(20px);
             padding: 30px;
             border-radius: 24px;
             border: 1px solid var(--border-glow);
-            box-shadow: 0 20px 40px rgba(0,0,0,0.7);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.8);
             z-index: 1;
             position: relative;
+            margin-top: 40px;
         }
 
         h1 {
             font-size: 26px;
-            font-weight: 700;
+            font-weight: 800;
             letter-spacing: -0.5px;
             margin-bottom: 6px;
-            background: linear-gradient(to right, #fff, var(--text-muted));
+            background: linear-gradient(to right, #ffffff, #a1a1aa);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
         }
@@ -91,7 +80,7 @@
             padding: 24px 16px;
             border-radius: 14px;
             cursor: pointer;
-            background: #050507;
+            background: #09090b;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             text-align: center;
         }
@@ -126,7 +115,7 @@
 
         .btn-spatial:hover {
             transform: translateY(-1px);
-            box-shadow: 0 5px 15px rgba(255,255,255,0.1);
+            box-shadow: 0 5px 15px rgba(255,255,255,0.15);
         }
 
         .btn-spatial:disabled {
@@ -155,50 +144,43 @@
         #viewerContainer {
             width: 100%;
             height: 400px;
-            background: #000000;
+            background: #020205;
             border-radius: 16px;
             margin-top: 24px;
             display: none;
             position: relative;
-            border: 1px solid #141416;
+            border: 1px solid #18181b;
             overflow: hidden;
         }
 
         model-viewer {
             width: 100%;
             height: 100%;
-            background-color: #000000;
-            --poster-color: transparent;
+            background-color: #020205;
         }
 
-        .fullscreen-toggle {
+        .ar-toggle-btn {
             position: absolute;
             bottom: 16px;
             left: 16px;
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255,255,255,0.1);
+            background: var(--accent-spatial);
+            border: none;
             color: white;
-            padding: 8px 16px;
+            padding: 10px 20px;
             border-radius: 8px;
             font-size: 13px;
             font-weight: 600;
             cursor: pointer;
             z-index: 10;
-            display: flex;
-            align-items: center;
-            letter-spacing: 0.5px;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
         }
 
-        #viewerContainer:fullscreen { border-radius: 0; width: 100vw; height: 100vh; margin-top: 0; }
-        #viewerContainer:fullscreen .fullscreen-toggle { bottom: 24px; left: 24px; }
-
-        /* POPUP MODAL & AR CARD DESIGN */
+        /* MODAL & DIALED IN HOLOVIEW DESIGN */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.85);
-            backdrop-filter: blur(8px);
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(12px);
             display: flex;
             justify-content: center;
             align-items: center;
@@ -221,119 +203,122 @@
             gap: 20px;
         }
 
-        /* The Card UI Wrapper styled based on the reference design */
+        /* Premium Cyberpunk AR Card Blueprint Layout */
         .ar-card-capture-area {
             width: 360px;
-            height: 520px;
-            background: #09090b;
-            border-radius: 24px;
+            height: 540px;
+            background: #0b0b11;
+            border-radius: 20px;
             padding: 24px;
             position: relative;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            border: 2px solid #1e1e24;
-            box-shadow: 0 0 30px rgba(59, 130, 246, 0.15);
+            border: 2px solid #2a2a3a;
+            box-shadow: 0 0 35px rgba(59, 130, 246, 0.15);
             overflow: hidden;
-        }
-
-        /* Neon gradient border simulation */
-        .ar-card-capture-area::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            border-radius: 24px;
-            padding: 2px;
-            background: linear-gradient(135deg, #3b82f6, #8b5cf6, #000, #3b82f6);
-            -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-            -webkit-mask-composite: xor;
-            mask-composite: exclude;
-            pointer-events: none;
         }
 
         .card-header {
             display: flex;
             align-items: center;
             gap: 12px;
+            border-bottom: 1px solid #1a1a26;
+            padding-bottom: 14px;
         }
 
         .card-logo-box {
-            width: 40px;
-            height: 40px;
+            width: 42px;
+            height: 42px;
             border-radius: 10px;
-            border: 1px solid #27272a;
-            background: #141416;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
             display: flex;
             justify-content: center;
             align-items: center;
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
         }
 
         .card-title-main {
-            font-size: 18px;
-            font-weight: 800;
-            letter-spacing: 1px;
+            font-size: 20px;
+            font-weight: 900;
+            letter-spacing: 1.5px;
             color: #ffffff;
+            background: linear-gradient(to right, #ffffff, #a5b4fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
         }
 
         .card-title-sub {
             font-size: 10px;
-            color: #71717a;
+            color: #6366f1;
             text-transform: uppercase;
-            letter-spacing: 0.5px;
+            letter-spacing: 1px;
+            font-weight: 700;
+            margin-top: 1px;
         }
 
         .card-preview-body {
             flex-grow: 1;
-            margin: 16px 0;
-            background: radial-gradient(circle, rgba(30,30,36,0.6) 0%, rgba(0,0,0,0) 80%);
+            margin: 20px 0;
+            background: #06060a;
+            border: 1px solid #151522;
+            border-radius: 14px;
             display: flex;
             justify-content: center;
             align-items: center;
             position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.6);
         }
 
         .card-preview-body img {
-            max-width: 85%;
-            max-height: 85%;
+            max-width: 95%;
+            max-height: 95%;
             object-fit: contain;
+            filter: drop-shadow(0 8px 16px rgba(0,0,0,0.5));
+            z-index: 2;
         }
 
         .card-footer {
             display: flex;
             justify-content: space-between;
-            align-items: flex-end;
-            border-top: 1px solid #18181b;
+            align-items: center;
+            gap: 12px;
+            border-top: 1px solid #1a1a26;
             padding-top: 16px;
         }
 
         .card-meta-info {
-            background: #020205;
-            border: 1px solid #141416;
-            padding: 12px;
-            border-radius: 14px;
-            min-width: 160px;
+            background: #06060a;
+            border: 1px solid #151522;
+            padding: 14px;
+            border-radius: 12px;
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
         }
 
         .meta-row {
             font-size: 11px;
-            margin-bottom: 6px;
             display: flex;
-            justify-content: space-between;
+            flex-direction: column;
+            gap: 2px;
         }
-        .meta-row:last-child { margin-bottom: 0; }
-        .meta-label { color: #52525b; text-transform: uppercase; font-weight: 600; }
-        .meta-value { color: #f4f4f5; font-weight: 700; max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;}
+        .meta-label { color: #4b5563; text-transform: uppercase; font-weight: 700; font-size: 9px; letter-spacing: 0.5px;}
+        .meta-value { color: #e4e4e7; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 140px;}
 
         .card-qr-container {
-            width: 95px;
-            height: 95px;
+            width: 105px;
+            height: 105px;
             background: #ffffff;
-            padding: 6px;
-            border-radius: 14px;
+            padding: 8px;
+            border-radius: 12px;
             display: flex;
             justify-content: center;
             align-items: center;
-            box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.1);
+            flex-shrink: 0;
         }
 
         .card-qr-container div {
@@ -348,25 +333,32 @@
         }
 
         .btn-modal {
-            padding: 12px 20px;
-            border-radius: 10px;
+            padding: 14px 24px;
+            border-radius: 12px;
             font-size: 14px;
             font-weight: 600;
             cursor: pointer;
             border: none;
             flex: 1;
             text-align: center;
+            transition: all 0.2s;
         }
 
-        .btn-modal-save { background: #ffffff; color: #000000; }
+        .btn-modal-save { 
+            background: #ffffff; 
+            color: #000000; 
+            box-shadow: 0 4px 15px rgba(255,255,255,0.2);
+        }
+        .btn-modal-save:hover { background: #e4e4e7; transform: translateY(-1px); }
         .btn-modal-close { background: #18181b; color: #a1a1aa; border: 1px solid #27272a; }
+        .btn-modal-close:hover { background: #27272a; }
     </style>
 </head>
 <body>
 
     <div class="container">
-        <h1>3D Spatial AR Portal</h1>
-        <p class="subtitle">Instant local preview active. Assets hosted on cloud expire at midnight.</p>
+        <h1>HOLOVIEW Spatial Portal</h1>
+        <p class="subtitle">Ecosystem Engine active. Assets deployed onto cloud expire at midnight.</p>
 
         <div class="upload-grid">
             <div id="boxGlb" class="upload-box" onclick="document.getElementById('inputGlb').click()">
@@ -382,14 +374,14 @@
             </div>
         </div>
 
-        <button id="uploadBtn" class="btn-spatial" disabled>Publish & Get Share Card</button>
+        <button id="uploadBtn" class="btn-spatial" disabled>Publish Manifest & Get Card</button>
         <p id="status"></p>
 
         <div id="timerBadge">Expires In: <span id="countdown">--:--:--</span></div>
 
         <div id="viewerContainer">
-            <button class="fullscreen-toggle" onclick="toggleViewFullscreen()">
-                View in Holo
+            <button class="ar-toggle-btn" onclick="triggerHardwareAR()">
+                Launch Spatial AR
             </button>
         </div>
     </div>
@@ -399,22 +391,22 @@
             <div id="arCard" class="ar-card-capture-area">
                 <div class="card-header">
                     <div class="card-logo-box">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
                     </div>
                     <div>
-                        <div class="card-title-main">CREARTOR</div>
-                        <div class="card-title-sub">WebAR Viewer Portal</div>
+                        <div class="card-title-main">HOLOVIEW</div>
+                        <div class="card-title-sub">SPATIAL AR PORTAL</div>
                     </div>
                 </div>
 
                 <div class="card-preview-body">
-                    <img id="cardSnapshot" src="" alt="3D Model Preview">
+                    <img id="cardSnapshot" src="" alt="3D Spatial Frame">
                 </div>
 
                 <div class="card-footer">
                     <div class="card-meta-info">
-                        <div class="meta-row"><span class="meta-label">Model</span><span id="metaName" class="meta-value">Unknown</span></div>
-                        <div class="meta-row"><span class="meta-label">Size</span><span id="metaSize" class="meta-value">0.0 MB</span></div>
+                        <div class="meta-row"><span class="meta-label">Model Engine</span><span id="metaName" class="meta-value">Unknown</span></div>
+                        <div class="meta-row"><span class="meta-label">Allocation</span><span id="metaSize" class="meta-value">0.0 MB</span></div>
                     </div>
                     <div class="card-qr-container">
                         <div id="qrcode"></div>
@@ -448,41 +440,32 @@
         const metaSize = document.getElementById('metaSize');
         const qrcodeContainer = document.getElementById('qrcode');
 
-        const MAX_SIZE = 10 * 1024 * 1024; // 10MB limit
+        const MAX_SIZE = 10 * 1024 * 1024; // 10MB
         let localGlbUrl = "";
         let localUsdzUrl = "";
         let timerInterval = null;
-        let qrCodeInstance = null;
 
-        // INLINE LOCAL PREVIEW (GLB)
         inputGlb.addEventListener('change', () => {
-            if (inputGlb.files[0]?.size > MAX_SIZE) { alert("GLB file size exceeds 10MB limit!"); inputGlb.value=""; return; }
+            if (inputGlb.files[0]?.size > MAX_SIZE) { alert("GLB file exceeds 10MB!"); inputGlb.value=""; return; }
             if (inputGlb.files[0]) {
                 boxGlb.classList.add('has-file');
                 lblGlb.innerText = inputGlb.files[0].name;
-                
                 if (localGlbUrl) URL.revokeObjectURL(localGlbUrl);
                 localGlbUrl = URL.createObjectURL(inputGlb.files[0]);
-                
                 initEngineViewer(localGlbUrl, localUsdzUrl);
-                status.innerHTML = "<span style='color:#3b82f6;'>Local Preview Active. Ready to view in Holo!</span>";
+                status.innerHTML = "<span style='color:#3b82f6;'>Local Engine Configured. Ready to Publish!</span>";
             }
             checkInputs();
         });
 
-        // INLINE LOCAL PREVIEW (USDZ)
         inputUsdz.addEventListener('change', () => {
-            if (inputUsdz.files[0]?.size > MAX_SIZE) { alert("USDZ file size exceeds 10MB limit!"); inputUsdz.value=""; return; }
+            if (inputUsdz.files[0]?.size > MAX_SIZE) { alert("USDZ file exceeds 10MB!"); inputUsdz.value=""; return; }
             if (inputUsdz.files[0]) {
                 boxUsdz.classList.add('has-file');
                 lblUsdz.innerText = inputUsdz.files[0].name;
-
                 if (localUsdzUrl) URL.revokeObjectURL(localUsdzUrl);
                 localUsdzUrl = URL.createObjectURL(inputUsdz.files[0]);
-
-                if (localGlbUrl) {
-                    initEngineViewer(localGlbUrl, localUsdzUrl);
-                }
+                if (localGlbUrl) initEngineViewer(localGlbUrl, localUsdzUrl);
             }
             checkInputs();
         });
@@ -501,10 +484,9 @@
             }
         });
 
-        // CLOUD STORAGE UPLOAD INTERACTION
         uploadBtn.addEventListener('click', async () => {
             uploadBtn.disabled = true;
-            status.innerHTML = "Pushing Spatial Manifest onto Vercel Architecture...";
+            status.innerHTML = "Deploying Spatial Mesh onto Node Infrastructure...";
 
             try {
                 const resGlb = await fetch(`/api/upload?filename=${encodeURIComponent(inputGlb.files[0].name)}`, {
@@ -515,50 +497,54 @@
 
                 let cloudUsdzUrl = "";
                 if (inputUsdz.files[0]) {
-                    status.innerHTML = "Synchronizing ecosystem pipeline with iOS Engine...";
+                    status.innerHTML = "Mapping fallback Apple Quick Look asset...";
                     const resUsdz = await fetch(`/api/upload?filename=${encodeURIComponent(inputUsdz.files[0].name)}`, {
                         method: 'POST', body: inputUsdz.files[0]
                     });
-                    if (!resUsdz.ok) throw new Error("USDZ asset allocation refused by server.");
+                    if (!resUsdz.ok) throw new Error("USDZ asset deployment failure.");
                     const dataUsdz = await resUsdz.json();
                     cloudUsdzUrl = dataUsdz.url;
                 }
 
-                status.innerHTML = "<span style='color:#10b981;'>Published successfully! Active until midnight.</span>";
+                status.innerHTML = "<span style='color:#10b981;'>Published successfully! Shared link generated.</span>";
                 
                 let shareLink = `${window.location.origin}${window.location.pathname}?glb=${encodeURIComponent(dataGlb.url)}`;
                 if(cloudUsdzUrl) shareLink += `&usdz=${encodeURIComponent(cloudUsdzUrl)}`;
 
-                // Clear temporary memory allocations
+                // Revoke blobs to save client RAM allocation
                 if (localGlbUrl) { URL.revokeObjectURL(localGlbUrl); localGlbUrl = ""; }
                 if (localUsdzUrl) { URL.revokeObjectURL(localUsdzUrl); localUsdzUrl = ""; }
 
                 initEngineViewer(dataGlb.url, cloudUsdzUrl);
                 startDestructionTimer();
                 
-                // Construct and display the pop-up share card interface
+                // Trigger dynamic modal construction
                 triggerShareCard(shareLink, inputGlb.files[0].name, inputGlb.files[0].size);
 
             } catch (err) {
-                status.innerHTML = `<span style='color:#ef4444;'>Cloud pipeline exception: ${err.message}</span>`;
+                status.innerHTML = `<span style='color:#ef4444;'>Pipeline Exception: ${err.message}</span>`;
                 uploadBtn.disabled = false;
             }
         });
 
         function initEngineViewer(glbUrl, usdzUrl) {
             viewerContainer.style.display = 'block';
-            
             const oldViewer = viewerContainer.querySelector('model-viewer');
             if (oldViewer) oldViewer.remove();
 
             const viewer = document.createElement('model-viewer');
+            viewer.setAttribute('id', 'spatialEngineInstance');
             viewer.setAttribute('src', glbUrl);
             viewer.setAttribute('ar', '');
             viewer.setAttribute('ar-modes', 'webxr scene-viewer quick-look');
             viewer.setAttribute('camera-controls', '');
             viewer.setAttribute('auto-rotate', '');
             viewer.setAttribute('shadow-intensity', '1');
+            viewer.setAttribute('preserve-drawing-buffer', 'true'); // CRITICAL FOR IMAGE RENDER CAPTURE
             viewer.setAttribute('crossorigin', 'anonymous');
+
+            viewer.style.width = '100%';
+            viewer.style.height = '100%';
 
             viewer.addEventListener('load', () => {
                 setTimeout(() => {
@@ -577,35 +563,34 @@
             viewerContainer.prepend(viewer);
         }
 
-        // SHARE CARD COMPONENT GENERATOR
         function triggerShareCard(url, filename, sizeInBytes) {
-            // Update textual card parameters
             const displaySize = (sizeInBytes / (1024 * 1024)).toFixed(1) + " MB";
-            const displayName = filename.replace(/\.[^/.]+$/, ""); // Strip file extension
+            const displayName = filename.replace(/\.[^/.]+$/, "");
             
             metaName.innerText = displayName;
             metaSize.innerText = displaySize;
 
-            // Generate clean vector QR Code inside card bounds
+            // Generate clean high-contrast scannable QR Code
             qrcodeContainer.innerHTML = "";
-            qrCodeInstance = new QRCode(qrcodeContainer, {
+            new QRCode(qrcodeContainer, {
                 text: url,
-                width: 85,
-                height: 85,
+                width: 89,
+                height: 89,
                 colorDark : "#000000",
                 colorLight : "#ffffff",
-                correctLevel : QRCode.CorrectLevel.H
+                correctLevel : QRCode.CorrectLevel.L // Low error level = bigger pixels = easier scanning
             });
 
-            // Extract high-res static frame matrix from structural <model-viewer> engine
-            const viewer = viewerContainer.querySelector('model-viewer');
+            const viewer = document.getElementById('spatialEngineInstance');
             if(viewer) {
-                // Microtask delay ensuring active buffer translation maps cleanly to base64 uri data
-                setTimeout(() => {
-                    const dataUrl = viewer.toDataURL("image/png");
-                    cardSnapshot.src = dataUrl;
-                    shareModal.classList.add('active');
-                }, 300);
+                // Wait for layout updates to make sure canvas graphic stream is populated
+                requestAnimationFrame(() => {
+                    setTimeout(() => {
+                        const dataUrl = viewer.toDataURL("image/png");
+                        cardSnapshot.src = dataUrl;
+                        shareModal.classList.add('active');
+                    }, 400);
+                });
             } else {
                 shareModal.classList.add('active');
             }
@@ -616,25 +601,25 @@
             uploadBtn.disabled = false;
         }
 
-        // SAVE TO PHOTOS COMPONENT ENGINE via html2canvas
         function saveCardToPhotos() {
             const cardElement = document.getElementById('arCard');
-            status.innerHTML = "Generating premium print layout container...";
+            status.innerHTML = "Compiling matrix screenshot elements...";
             
+            // Set smooth background configurations natively compatible with html2canvas mapping
             html2canvas(cardElement, {
                 useCORS: true,
-                allowTaint: true,
-                backgroundColor: "#000000",
-                scale: 2 // High definition matrix scaler rendering
+                allowTaint: false,
+                backgroundColor: "#0b0b11",
+                scale: 3 // Ultra high-definition export
             }).then(canvas => {
                 const image = canvas.toDataURL("image/png");
                 const link = document.createElement('a');
-                link.download = `${metaName.innerText || 'AR'}_Share_Card.png`;
+                link.download = `HOLOVIEW_${metaName.innerText}.png`;
                 link.href = image;
                 link.click();
-                status.innerHTML = "<span style='color:#10b981;'>Card successfully saved to downloads folder!</span>";
+                status.innerHTML = "<span style='color:#10b981;'>HOLOVIEW card exported to gallery successfully!</span>";
             }).catch(err => {
-                alert("Vector mapping serialization failed: " + err.message);
+                alert("Vector matrix generation failed: " + err.message);
             });
         }
 
@@ -666,13 +651,10 @@
             timerInterval = setInterval(updateCountdown, 1000);
         }
 
-        function toggleViewFullscreen() {
-            if (!document.fullscreenElement) {
-                viewerContainer.requestFullscreen().catch(err => {
-                    alert(`Holo Engine failed to scale viewport: ${err.message}`);
-                });
-            } else {
-                document.exitFullscreen();
+        function triggerHardwareAR() {
+            const viewer = document.getElementById('spatialEngineInstance');
+            if (viewer) {
+                viewer.activateAR(); // Directly triggers hardware XR camera portal
             }
         }
     </script>
