@@ -12,7 +12,7 @@
             --bg-pure-black: #050507;
             --card-dark: #0b0b0f;
             --border-glow: #1f1f2e;
-            --accent-spatial: #10b981; /* Green border when active like img 2 */
+            --accent-spatial: #10b981; 
             --accent-glow: rgba(16, 185, 129, 0.1);
             --text-main: #f4f4f5;
             --text-muted: #71717a;
@@ -107,9 +107,8 @@
             transform: none;
         }
 
-        #status { font-size: 13px; margin-top: 14px; font-weight: 500; text-align: center; color: #3b82f6; }
+        #status { font-size: 13px; margin-top: 14px; font-weight: 500; text-align: center; color: #71717a; }
 
-        /* Viewer Container: Pure Black dengan Spatial Vibes Glow */
         #viewerContainer {
             width: 100%;
             height: 440px;
@@ -129,7 +128,6 @@
             background-color: transparent;
         }
 
-        /* Fullscreen & AR Icon Overrides */
         .btn-fullscreen {
             position: absolute;
             top: 16px;
@@ -148,7 +146,6 @@
             z-index: 12;
         }
 
-        /* Modal Layout */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -196,23 +193,9 @@
             padding-bottom: 12px;
         }
 
-        .card-logo-box {
-            font-size: 20px;
-        }
-
-        .card-title-main {
-            font-size: 18px;
-            font-weight: 800;
-            letter-spacing: 1px;
-            color: #ffffff;
-        }
-
-        .card-title-sub {
-            font-size: 10px;
-            color: #3b82f6;
-            text-transform: uppercase;
-            font-weight: 700;
-        }
+        .card-logo-box { font-size: 20px; }
+        .card-title-main { font-size: 18px; font-weight: 800; letter-spacing: 1px; color: #ffffff; }
+        .card-title-sub { font-size: 10px; color: #3b82f6; text-transform: uppercase; font-weight: 700; }
 
         .card-preview-body {
             flex-grow: 1;
@@ -223,8 +206,14 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            color: var(--text-muted);
-            font-size: 13px;
+            overflow: hidden;
+        }
+
+        /* Thumbnail Image Style */
+        .card-preview-body img {
+            max-width: 90%;
+            max-height: 90%;
+            object-fit: contain;
         }
 
         .card-footer {
@@ -238,10 +227,9 @@
         .card-meta-title { font-size: 12px; color: #ffffff; font-weight: 600; margin-bottom: 2px;}
         .card-meta-desc { font-size: 10px; color: var(--text-muted); }
 
-        /* QR Code Container agar bersih & kontras tinggi */
         #qrcode {
-            width: 68px;
-            height: 68px;
+            width: 64px;
+            height: 64px;
             background: #ffffff;
             padding: 5px;
             border-radius: 8px;
@@ -278,7 +266,7 @@
 
         <div id="viewerContainer">
             <button class="btn-fullscreen" onclick="toggleFullscreen()">⛶</button>
-            <model-viewer id="modelViewer" ar ar-modes="webxr scene-viewer quick-look" camera-controls touch-action="none" shadow-intensity="1">
+            <model-viewer id="modelViewer" ar ar-modes="webxr scene-viewer quick-look" camera-controls touch-action="none" shadow-intensity="1" autoplay animation-name="*">
             </model-viewer>
         </div>
     </div>
@@ -293,8 +281,8 @@
                         <div class="card-title-sub">Spatial Portal Passport</div>
                     </div>
                 </div>
-                <div class="card-preview-body">
-                    <span>Asset Synchronized ✅</span>
+                <div class="card-preview-body" id="cardPreviewArea">
+                    <span style="color: var(--text-muted); font-size: 12px;">Generating Preview...</span>
                 </div>
                 <div class="card-footer">
                     <div class="card-meta">
@@ -315,25 +303,23 @@
         const viewerContainer = document.getElementById('viewerContainer');
         const modelViewer = document.getElementById('modelViewer');
         const statusText = document.getElementById('status');
+        const cardPreviewArea = document.getElementById('cardPreviewArea');
 
-        // Otomatis Render Preview saat File GLB di-upload
         glbInput.addEventListener('change', (e) => {
             if(e.target.files[0]) {
                 const file = e.target.files[0];
                 document.getElementById('glbName').innerText = file.name;
                 document.getElementById('glbBox').classList.add('has-file');
                 
-                // Load langsung ke model viewer
                 const url = URL.createObjectURL(file);
                 modelViewer.src = url;
                 
-                // Tampilkan Container 3D
                 viewerContainer.style.display = 'block';
-                
-                // Aktifkan tombol publish
                 renderBtn.removeAttribute('disabled');
+                
+                // Mengubah status teks menjadi aktif mengikuti perubahan file
                 statusText.innerText = "Local Engine Configured. Ready to Publish!";
-                statusText.style.color = "#3b82f6";
+                statusText.style.color = "#10b981";
             }
         });
 
@@ -348,22 +334,28 @@
             }
         });
 
-        // Trigger Tombol Publish untuk memunculkan Card & QR Code
-        renderBtn.addEventListener('click', () => {
+        renderBtn.addEventListener('click', async () => {
             const qrContainer = document.getElementById('qrcode');
-            qrContainer.innerHTML = ""; // Reset QR Code lama
+            qrContainer.innerHTML = ""; 
 
-            // Menggunakan manifest link tiruan atau url object sementara yang valid
-            const dummyShareUrl = window.location.href; 
+            // Mengambil screenshot dari model-viewer secara instan untuk dijadikan thumbnail Passport
+            try {
+                const dataUrl = modelViewer.toDataURL("image/png");
+                cardPreviewArea.innerHTML = `<img src="${dataUrl}" alt="Asset Thumbnail">`;
+            } catch (err) {
+                cardPreviewArea.innerHTML = `<span style="color: var(--text-muted); font-size: 12px;">Asset Loaded</span>`;
+            }
 
-            // Konfigurasi QR Code yang tidak padat agar sangat mudah discan
+            // Membaca URL saat ini secara dinamis (Vercel atau Localhost)
+            const currentLiveUrl = window.location.href; 
+
             new QRCode(qrContainer, {
-                text: dummyShareUrl,
-                width: 58,
-                height: 58,
+                text: currentLiveUrl,
+                width: 54,
+                height: 54,
                 colorDark : "#000000",
                 colorLight : "#ffffff",
-                correctLevel : QRCode.CorrectLevel.L // Level L = Kotak modul renggang/tidak padat
+                correctLevel : QRCode.CorrectLevel.L
             });
 
             document.getElementById('modalOverlay').classList.add('active');
