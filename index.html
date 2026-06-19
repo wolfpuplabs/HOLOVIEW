@@ -151,6 +151,7 @@
             position: relative;
             border: 1px solid #18181b;
             overflow: hidden;
+            cursor: pointer;
         }
 
         model-viewer {
@@ -159,23 +160,38 @@
             background-color: #020205;
         }
 
-        .ar-toggle-btn {
+        /* Full-screen tap overlay untuk menggantikan tombol kecil */
+        .ar-fullscreen-overlay {
             position: absolute;
-            bottom: 16px;
-            left: 16px;
-            background: var(--accent-spatial);
-            border: none;
-            color: white;
-            padding: 10px 20px;
-            border-radius: 8px;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.2);
+            display: flex;
+            justify-content: center;
+            align-items: center;
             z-index: 10;
-            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+            transition: background 0.3s;
         }
 
-        /* MODAL & DIALED IN HOLOVIEW DESIGN */
+        .ar-fullscreen-overlay:hover {
+            background: rgba(59, 130, 246, 0.15);
+        }
+
+        .ar-hint-banner {
+            background: rgba(11, 11, 15, 0.85);
+            border: 1px solid var(--border-glow);
+            padding: 12px 24px;
+            border-radius: 30px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #ffffff;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            pointer-events: none; /* Klik tembus ke overlay parent */
+            letter-spacing: 0.5px;
+        }
+
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
@@ -203,7 +219,6 @@
             gap: 20px;
         }
 
-        /* Premium Cyberpunk AR Card Blueprint Layout */
         .ar-card-capture-area {
             width: 360px;
             height: 540px;
@@ -358,31 +373,33 @@
 
     <div class="container">
         <h1>HOLOVIEW Spatial Portal</h1>
-        <p class="subtitle">Ecosystem Engine active. Assets deployed onto cloud expire at midnight.</p>
+        <p id="engineSubtitle" class="subtitle">Ecosystem Engine active. Assets deployed onto cloud expire at midnight.</p>
 
-        <div class="upload-grid">
-            <div id="boxGlb" class="upload-box" onclick="document.getElementById('inputGlb').click()">
-                <div class="box-title">Android / Web Engine</div>
-                <div id="lblGlb" class="box-sub">Choose .glb file (Required)</div>
-                <input type="file" id="inputGlb" accept=".glb">
+        <div id="setupFormArea">
+            <div class="upload-grid">
+                <div id="boxGlb" class="upload-box" onclick="document.getElementById('inputGlb').click()">
+                    <div class="box-title">Android / Web Engine</div>
+                    <div id="lblGlb" class="box-sub">Choose .glb file (Required)</div>
+                    <input type="file" id="inputGlb" accept=".glb">
+                </div>
+
+                <div id="boxUsdz" class="upload-box" onclick="document.getElementById('inputUsdz').click()">
+                    <div class="box-title">iOS AR Engine</div>
+                    <div id="lblUsdz" class="box-sub">Choose .usdz file (Optional)</div>
+                    <input type="file" id="inputUsdz" accept=".usdz">
+                </div>
             </div>
 
-            <div id="boxUsdz" class="upload-box" onclick="document.getElementById('inputUsdz').click()">
-                <div class="box-title">iOS AR Engine</div>
-                <div id="lblUsdz" class="box-sub">Choose .usdz file (Optional)</div>
-                <input type="file" id="inputUsdz" accept=".usdz">
-            </div>
+            <button id="uploadBtn" class="btn-spatial" disabled>Publish Manifest & Get Card</button>
         </div>
-
-        <button id="uploadBtn" class="btn-spatial" disabled>Publish Manifest & Get Card</button>
+        
         <p id="status"></p>
-
         <div id="timerBadge">Expires In: <span id="countdown">--:--:--</span></div>
 
-        <div id="viewerContainer">
-            <button class="ar-toggle-btn" onclick="triggerHardwareAR()">
-                Launch Spatial AR
-            </button>
+        <div id="viewerContainer" onclick="triggerHardwareAR()">
+            <div class="ar-fullscreen-overlay">
+                <div class="ar-hint-banner">Tap to View in Spatial AR</div>
+            </div>
         </div>
     </div>
 
@@ -433,6 +450,8 @@
         const timerBadge = document.getElementById('timerBadge');
         const countdown = document.getElementById('countdown');
         const viewerContainer = document.getElementById('viewerContainer');
+        const setupFormArea = document.getElementById('setupFormArea');
+        const engineSubtitle = document.getElementById('engineSubtitle');
         
         const shareModal = document.getElementById('shareModal');
         const cardSnapshot = document.getElementById('cardSnapshot');
@@ -440,7 +459,7 @@
         const metaSize = document.getElementById('metaSize');
         const qrcodeContainer = document.getElementById('qrcode');
 
-        const MAX_SIZE = 10 * 1024 * 1024; // 10MB
+        const MAX_SIZE = 10 * 1024 * 1024; 
         let localGlbUrl = "";
         let localUsdzUrl = "";
         let timerInterval = null;
@@ -479,12 +498,15 @@
             const modelParam = params.get('glb');
             const iosParam = params.get('usdz');
             if (modelParam) {
+                setupFormArea.style.display = 'none';
+                engineSubtitle.innerText = "Spatial Link active. Immersive hardware portal initialized below.";
                 initEngineViewer(modelParam, iosParam);
                 startDestructionTimer();
             }
         });
 
         uploadBtn.addEventListener('click', async () => {
+            if (!inputGlb.files[0]) return;
             uploadBtn.disabled = true;
             status.innerHTML = "Deploying Spatial Mesh onto Node Infrastructure...";
 
@@ -511,15 +533,16 @@
                 let shareLink = `${window.location.origin}${window.location.pathname}?glb=${encodeURIComponent(dataGlb.url)}`;
                 if(cloudUsdzUrl) shareLink += `&usdz=${encodeURIComponent(cloudUsdzUrl)}`;
 
-                // Revoke blobs to save client RAM allocation
+                const trackedName = inputGlb.files[0].name;
+                const trackedSize = inputGlb.files[0].size;
+
                 if (localGlbUrl) { URL.revokeObjectURL(localGlbUrl); localGlbUrl = ""; }
                 if (localUsdzUrl) { URL.revokeObjectURL(localUsdzUrl); localUsdzUrl = ""; }
 
                 initEngineViewer(dataGlb.url, cloudUsdzUrl);
                 startDestructionTimer();
                 
-                // Trigger dynamic modal construction
-                triggerShareCard(shareLink, inputGlb.files[0].name, inputGlb.files[0].size);
+                triggerShareCard(shareLink, trackedName, trackedSize);
 
             } catch (err) {
                 status.innerHTML = `<span style='color:#ef4444;'>Pipeline Exception: ${err.message}</span>`;
@@ -529,6 +552,8 @@
 
         function initEngineViewer(glbUrl, usdzUrl) {
             viewerContainer.style.display = 'block';
+            
+            // Hapus instance model-viewer sebelumnya jika ada
             const oldViewer = viewerContainer.querySelector('model-viewer');
             if (oldViewer) oldViewer.remove();
 
@@ -540,7 +565,7 @@
             viewer.setAttribute('camera-controls', '');
             viewer.setAttribute('auto-rotate', '');
             viewer.setAttribute('shadow-intensity', '1');
-            viewer.setAttribute('preserve-drawing-buffer', 'true'); // CRITICAL FOR IMAGE RENDER CAPTURE
+            viewer.setAttribute('preserve-drawing-buffer', 'true'); 
             viewer.setAttribute('crossorigin', 'anonymous');
 
             viewer.style.width = '100%';
@@ -560,6 +585,7 @@
                 viewer.setAttribute('ios-src', usdzUrl);
             }
 
+            // Taruh model-viewer di belakang tap overlay
             viewerContainer.prepend(viewer);
         }
 
@@ -570,7 +596,7 @@
             metaName.innerText = displayName;
             metaSize.innerText = displaySize;
 
-            // Generate clean high-contrast scannable QR Code
+            // FIX 1: Peningkatan densitas kontras dan level koreksi QR Code agar mudah dibaca kamera smartphone
             qrcodeContainer.innerHTML = "";
             new QRCode(qrcodeContainer, {
                 text: url,
@@ -578,46 +604,62 @@
                 height: 89,
                 colorDark : "#000000",
                 colorLight : "#ffffff",
-                correctLevel : QRCode.CorrectLevel.L // Low error level = bigger pixels = easier scanning
+                correctLevel : QRCode.CorrectLevel.M 
             });
 
             const viewer = document.getElementById('spatialEngineInstance');
             if(viewer) {
-                // Wait for layout updates to make sure canvas graphic stream is populated
-                requestAnimationFrame(() => {
-                    setTimeout(() => {
-                        const dataUrl = viewer.toDataURL("image/png");
-                        cardSnapshot.src = dataUrl;
-                        shareModal.classList.add('active');
-                    }, 400);
-                });
+                // FIX 2: Menunggu event rendering canvas selesai agar snapshot 3D tidak blank hitam
+                if (viewer.loaded) {
+                    captureModelSnapshot(viewer);
+                } else {
+                    viewer.addEventListener('load', () => captureModelSnapshot(viewer), { once: true });
+                }
             } else {
                 shareModal.classList.add('active');
             }
         }
 
+        function captureModelSnapshot(viewer) {
+            // Memberikan frame waktu buffer agar engine WebGL menyelesaikan render pass pertamanya
+            requestAnimationFrame(() => {
+                setTimeout(() => {
+                    viewer.toBlob({ idealAspect: false }).then((blob) => {
+                        const reader = new FileReader();
+                        reader.onloadend = function() {
+                            cardSnapshot.src = reader.result;
+                            shareModal.classList.add('active');
+                        }
+                        reader.readAsDataURL(blob);
+                    }).catch((e) => {
+                        console.error("Snapshot generation halted: ", e);
+                        shareModal.classList.add('active');
+                    });
+                }, 500); 
+            });
+        }
+
         function closeModal() {
             shareModal.classList.remove('active');
-            uploadBtn.disabled = false;
+            uploadBtn.disabled = (inputGlb.files.length === 0);
         }
 
         function saveCardToPhotos() {
             const cardElement = document.getElementById('arCard');
             status.innerHTML = "Compiling matrix screenshot elements...";
             
-            // Set smooth background configurations natively compatible with html2canvas mapping
             html2canvas(cardElement, {
                 useCORS: true,
                 allowTaint: false,
                 backgroundColor: "#0b0b11",
-                scale: 3 // Ultra high-definition export
+                scale: 3
             }).then(canvas => {
                 const image = canvas.toDataURL("image/png");
                 const link = document.createElement('a');
-                link.download = `HOLOVIEW_${metaName.innerText}.png`;
+                link.download = `HOLOVIEW_${metaName.innerText || 'Asset'}.png`;
                 link.href = image;
                 link.click();
-                status.innerHTML = "<span style='color:#10b981;'>HOLOVIEW card exported to gallery successfully!</span>";
+                status.innerHTML = "<span style='color:#10b981;'>HOLOVIEW card exported successfully!</span>";
             }).catch(err => {
                 alert("Vector matrix generation failed: " + err.message);
             });
@@ -654,7 +696,7 @@
         function triggerHardwareAR() {
             const viewer = document.getElementById('spatialEngineInstance');
             if (viewer) {
-                viewer.activateAR(); // Directly triggers hardware XR camera portal
+                viewer.activateAR();
             }
         }
     </script>
