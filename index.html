@@ -161,6 +161,14 @@
   .stage-empty h3 { font-size: 14px; color: var(--text); font-weight: 600; letter-spacing: .3px; }
   .stage-empty p { font-size: 11.5px; margin-top: 5px; font-family: "Space Mono", monospace; }
 
+  .destruct {
+    position: absolute; top: 12px; left: 12px; z-index: 5; transform: translateY(34px);
+    font-family: "Space Mono", monospace; font-size: 10px; letter-spacing: .5px; font-weight: 700;
+    color: var(--rose); background: rgba(255,92,122,0.1); border: 1px solid rgba(255,92,122,0.35);
+    padding: 4px 9px; border-radius: 8px; backdrop-filter: blur(8px);
+  }
+  .destruct.expired { color: var(--muted); border-color: var(--line); background: rgba(7,8,15,0.6); }
+
   .stage-ctl { position: absolute; top: 12px; right: 12px; z-index: 5; display: flex; gap: 8px; }
   .stage-ctl .icon-btn { width: 34px; height: 34px; font-size: 13px; background: rgba(7,8,15,0.6); }
 
@@ -326,7 +334,9 @@
     <div class="grid-floor"></div>
     <div class="depth-glow"></div>
     <span class="stage-tag" id="stageTag" style="display:none"></span>
+    <span class="destruct" id="destruct" style="display:none"></span>
     <div class="stage-ctl">
+      <button class="icon-btn" id="shareActiveBtn" title="Share (24h link)" style="display:none">↗</button>
       <button class="icon-btn" id="fsBtn" title="Fullscreen">⛶</button>
       <button class="icon-btn" id="ejectBtn" title="Clear stage" style="display:none">⏏</button>
     </div>
@@ -388,7 +398,7 @@
   <div class="empty-lib" id="emptyLib">no assets yet — add a .glb above to begin</div>
 
   <div class="row-btns" id="shareRow" style="margin-top:18px; display:none">
-    <button class="btn btn-ghost" id="shareBtn">⛓ Share this library</button>
+    <button class="btn btn-ghost" id="shareBtn">⛓ Share whole library (offline cache)</button>
   </div>
 </div>
 
@@ -409,6 +419,7 @@
           <div><span class="k">library</span> <span class="v" id="ppName">—</span></div>
           <div><span class="k">assets</span> <span class="v" id="ppCount">0</span></div>
           <div><span class="k">size</span> <span class="v" id="ppSize">—</span></div>
+          <div id="ppExpRow" style="display:none"><span class="k">expires</span> <span class="v" id="ppCountdown" style="color:var(--rose);font-weight:700">24:00:00</span></div>
         </div>
         <div style="display:flex; flex-direction:column; align-items:flex-end; gap:6px;">
           <div style="font-family:'Space Mono',monospace; font-size:8px; color:var(--muted); letter-spacing:.5px; text-align:right;">SCAN TO<br>OPEN</div>
@@ -435,6 +446,29 @@ import { upload } from 'https://esm.sh/@vercel/blob@2.5.0/client';
 /* ============================ State ============================ */
 const $ = (id) => document.getElementById(id);
 const fmtMB = (b) => (b / 1048576).toFixed(1) + ' MB';
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function fmtCountdown(ms) {
+  if (ms <= 0) return 'EXPIRED';
+  const h = Math.floor(ms / 3600000), m = Math.floor((ms % 3600000) / 60000), s = Math.floor((ms % 60000) / 1000);
+  return [h, m, s].map((n) => String(n).padStart(2, '0')).join(':');
+}
+
+// One global ticker drives every visible countdown (stage badge + passport).
+let activeExpiry = 0, passportExpiry = 0;
+setInterval(() => {
+  const now = Date.now();
+  if (activeExpiry) {
+    const left = activeExpiry - now;
+    const el = $('destruct');
+    el.textContent = left > 0 ? 'AUTO-DESTRUCT ' + fmtCountdown(left) : 'LINK EXPIRED';
+    el.classList.toggle('expired', left <= 0);
+  }
+  if (passportExpiry && $('overlay').classList.contains('show')) {
+    const left = passportExpiry - now;
+    $('ppCountdown').textContent = fmtCountdown(left);
+  }
+}, 1000);
 
 const state = {
   mode: 'studio',          // 'studio' | 'viewer'
@@ -561,12 +595,19 @@ function loadAsset(item) {
   $('stageTag').style.display = 'block';
   $('stageTag').textContent = '◈ ' + item.name;
   $('ejectBtn').style.display = 'grid';
+  // 24h auto-destruct badge + share button
+  if (item.expiresAt) {
+    activeExpiry = item.expiresAt;
+    $('destruct').style.display = 'block';
+  } else { activeExpiry = 0; $('destruct').style.display = 'none'; }
+  $('shareActiveBtn').style.display = 'grid';
   runScan();
   document.querySelectorAll('.card').forEach((c) => c.classList.toggle('active', c.dataset.id === item.id));
 }
 function ejectStage() {
   viewer.style.display = 'none'; viewer.removeAttribute('src');
   $('stageEmpty').style.display = 'grid'; $('stageTag').style.display = 'none'; $('ejectBtn').style.display = 'none';
+  $('destruct').style.display = 'none'; $('shareActiveBtn').style.display = 'none'; activeExpiry = 0;
   state.activeId = null;
   document.querySelectorAll('.card').forEach((c) => c.classList.remove('active'));
 }
@@ -716,7 +757,7 @@ $('addBtn').addEventListener('click', async () => {
       id: 'a_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
       name: state.pendingGlb.name.replace(/\.[^.]+$/, ''),
       size: state.pendingGlb.size + (state.pendingUsdz ? state.pendingUsdz.size : 0),
-      glb: glbBlob.url, usdz: usdzUrl, thumb, createdAt: Date.now(),
+      glb: glbBlob.url, usdz: usdzUrl, thumb, createdAt: Date.now(), expiresAt: Date.now() + DAY_MS,
     };
     await dbPut(item);
     state.library.unshift(item);
@@ -742,7 +783,32 @@ function resetComposer() {
   $('glbInput').value = ''; $('usdzInput').value = ''; $('addBtn').disabled = true;
 }
 
-/* ============================ Share library ============================ */
+/* ============================ Share: single asset (24h) ============================ */
+async function shareActiveAsset() {
+  const item = state.library.find((a) => a.id === state.activeId);
+  if (!item) return;
+  // (Re)start the 24h clock at share time so recipients always get a fresh window.
+  item.expiresAt = Date.now() + DAY_MS;
+  activeExpiry = item.expiresAt;
+  await dbPut(item).catch(() => {});
+
+  const base = location.origin + location.pathname;
+  let url = `${base}?model=${encodeURIComponent(item.glb)}&name=${encodeURIComponent(item.name)}&size=${item.size || 0}&exp=${item.expiresAt}`;
+  if (item.usdz) url += `&ios=${encodeURIComponent(item.usdz)}`;
+
+  openPassport({
+    name: item.name,
+    countLabel: 'single asset',
+    count: 1,
+    size: item.size || 0,
+    thumbs: item.thumb ? [item.thumb] : [],
+    url, exp: item.expiresAt,
+  });
+  setStatus('24h link ready ✓', 'ok'); sfx.ding();
+}
+$('shareActiveBtn').addEventListener('click', shareActiveAsset);
+
+/* ============================ Share library (offline cache) ============================ */
 async function shareLibrary() {
   if (!state.library.length) return;
   setStatus('packaging manifest…', 'work');
@@ -757,30 +823,39 @@ async function shareLibrary() {
     const res = await uploadFile(file);
     const base = location.origin + location.pathname;
     const shareUrl = `${base}?lib=${encodeURIComponent(res.url)}`;
-    openPassport(manifest, shareUrl);
+    openPassport({
+      name: manifest.name,
+      countLabel: 'assets',
+      count: manifest.assets.length,
+      size: manifest.assets.reduce((s, a) => s + (a.size || 0), 0),
+      thumbs: manifest.assets.filter((a) => a.thumb).map((a) => a.thumb).slice(0, 6),
+      url: shareUrl, exp: 0,
+    });
     setStatus('library shared ✓', 'ok'); sfx.ding();
   } catch (err) {
-    setStatus('share failed — needs /api/upload deployed', 'err');
+    setStatus('share failed — needs /api/upload + token', 'err');
   }
 }
 
 /* ============================ Passport modal ============================ */
-function openPassport(manifest, shareUrl) {
-  $('ppName').textContent = manifest.name;
-  $('ppCount').textContent = manifest.assets.length;
-  $('ppSize').textContent = fmtMB(manifest.assets.reduce((s, a) => s + (a.size || 0), 0));
-  // preview: collage of up to 6 thumbnails
+function openPassport({ name, countLabel, count, size, thumbs, url, exp }) {
+  $('ppName').textContent = name;
+  $('ppCount').textContent = count + (countLabel === 'single asset' ? ' (single)' : '');
+  $('ppSize').textContent = fmtMB(size);
+  // expiry / countdown
+  if (exp) { passportExpiry = exp; $('ppExpRow').style.display = 'block'; $('ppCountdown').textContent = fmtCountdown(exp - Date.now()); }
+  else { passportExpiry = 0; $('ppExpRow').style.display = 'none'; }
+  // preview collage
   const prev = $('ppPreview'); prev.innerHTML = '';
-  const thumbs = manifest.assets.filter((a) => a.thumb).slice(0, 6);
-  if (thumbs.length) {
+  if (thumbs && thumbs.length) {
     const g = document.createElement('div'); g.className = 'pp-grid-mini';
-    thumbs.forEach((t) => { const d = document.createElement('div'); d.innerHTML = `<img src="${t.thumb}">`; g.appendChild(d); });
+    thumbs.forEach((t) => { const d = document.createElement('div'); d.innerHTML = `<img src="${t}">`; g.appendChild(d); });
     prev.appendChild(g);
-  } else { prev.innerHTML = '<span style="color:var(--muted);font-size:11px">Spatial library</span>'; }
+  } else { prev.innerHTML = '<span style="color:var(--muted);font-size:11px">Spatial asset</span>'; }
 
-  $('shareInput').value = shareUrl;
+  $('shareInput').value = url;
   const qr = $('qrcode'); qr.innerHTML = '';
-  new QRCode(qr, { text: shareUrl, width: 200, height: 200, colorDark: '#000', colorLight: '#fff', correctLevel: QRCode.CorrectLevel.M });
+  new QRCode(qr, { text: url, width: 200, height: 200, colorDark: '#000', colorLight: '#fff', correctLevel: QRCode.CorrectLevel.M });
   $('overlay').classList.add('show');
 }
 $('closeModal').addEventListener('click', () => { $('overlay').classList.remove('show'); sfx.tick(); });
@@ -841,12 +916,30 @@ $('dlBtn').addEventListener('click', async () => {
   sfx.ding(); toast('Library cached for offline'); refreshTelemetry();
 });
 
-/* legacy single-model links: ?model=...&ios=...&name=... */
+/* shared single-model links (24h): ?model=...&ios=...&name=...&size=...&exp=... */
 async function legacySingle(p) {
   state.mode = 'viewer'; $('modeTag').textContent = 'VIEWER'; $('composer').style.display = 'none'; $('recvPanel').style.display = 'block';
-  const item = { id: 'legacy', name: p.get('name') || 'Shared model', size: 0, glb: p.get('model'), usdz: p.get('ios') || null, thumb: null };
-  state.library = [item]; $('libTitle').textContent = 'Shared model'; renderLibrary(); loadAsset(item);
-  $('recvStatus').textContent = 'Download to cache so replays cost zero network.';
+  const exp = parseInt(p.get('exp') || '0', 10) || 0;
+  const item = {
+    id: 'shared', name: p.get('name') || 'Shared model',
+    size: parseInt(p.get('size') || '0', 10) || 0,
+    glb: p.get('model'), usdz: p.get('ios') || null, thumb: null,
+    expiresAt: exp,
+  };
+  state.library = [item]; $('libTitle').textContent = 'Shared model'; renderLibrary();
+
+  if (exp && Date.now() > exp) {
+    // expired link — same behavior as the old auto-destruct
+    $('recvStatus').textContent = 'This share link has expired (24h limit reached).';
+    $('dlBtn').disabled = true;
+    $('stageEmpty').style.display = 'grid'; $('stageEmpty').querySelector('h3').textContent = 'Link expired';
+    $('stageEmpty').querySelector('p').textContent = 'ask the sender for a fresh 24h link';
+    return;
+  }
+  loadAsset(item);
+  $('recvStatus').textContent = exp
+    ? 'Valid for 24h. Download to cache so replays cost zero network.'
+    : 'Download to cache so replays cost zero network.';
 }
 
 /* ============================ Controls ============================ */
