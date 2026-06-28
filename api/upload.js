@@ -14,6 +14,7 @@
 
 import { handleUpload } from '@vercel/blob/client';
 import { isAuthed } from './_lib/auth.js';
+import { ensureBlobToken } from './_lib/blob.js';
 
 const ALLOWED = [
   'model/gltf-binary',        // .glb
@@ -35,7 +36,7 @@ export default async function handler(req, res) {
       ok: true,
       route: '/api/upload',
       runtime: 'nodejs',
-      tokenConfigured: !!process.env.BLOB_READ_WRITE_TOKEN,
+      tokenConfigured: ensureBlobToken(),
       hint: process.env.BLOB_READ_WRITE_TOKEN
         ? 'Token present. Uploads should work.'
         : 'Set BLOB_READ_WRITE_TOKEN in Vercel and redeploy.',
@@ -51,9 +52,9 @@ export default async function handler(req, res) {
     return res.status(401).json({ error: 'Login required to upload' });
   }
 
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+  if (!ensureBlobToken()) {
     return res.status(500).json({
-      error: 'Server is missing BLOB_READ_WRITE_TOKEN. Set it in Vercel env vars and redeploy.',
+      error: 'Server is missing a Blob token. Connect a Blob store / set BLOB_READ_WRITE_TOKEN, then redeploy.',
     });
   }
 
