@@ -8,7 +8,7 @@
 export function ensureBlobToken() {
   if (process.env.BLOB_READ_WRITE_TOKEN) return true;
   const key = Object.keys(process.env).find(
-    (k) => /READ_WRITE_TOKEN$/.test(k) && process.env[k]
+    (k) => (/READ_WRITE_TOKEN$/.test(k) || /^BLOB_TOKEN$/.test(k)) && process.env[k]
   );
   if (key) {
     process.env.BLOB_READ_WRITE_TOKEN = process.env[key];
