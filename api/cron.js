@@ -16,6 +16,7 @@
 
 import { list, del } from '@vercel/blob';
 import { libraryKey } from './_lib/auth.js';
+import { ensureBlobToken } from './_lib/blob.js';
 
 export default async function handler(req, res) {
   // If CRON_SECRET is set, require it (Vercel sends it as a Bearer token).
@@ -25,8 +26,8 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
   }
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    return res.status(500).json({ error: 'BLOB_READ_WRITE_TOKEN is not set.' });
+  if (!ensureBlobToken()) {
+    return res.status(500).json({ error: 'No Blob token on the server.' });
   }
 
   const maxAgeMs = Number(process.env.CRON_MAX_AGE_HOURS || 24) * 3600 * 1000;
