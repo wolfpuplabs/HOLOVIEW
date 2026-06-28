@@ -217,6 +217,9 @@
   .progress.show { display: block; }
   .bar { height: 8px; border-radius: 99px; background: var(--void-2); border: 1px solid var(--line); overflow: hidden; }
   .bar > i { display: block; height: 100%; width: 0%; background: linear-gradient(90deg, var(--cyan), var(--violet)); transition: width .25s var(--ease); }
+  .bar.indet { position: relative; }
+  .bar.indet > i { width: 35% !important; transition: none; animation: indet 1.15s ease-in-out infinite; }
+  @keyframes indet { 0% { margin-left: -35%; } 100% { margin-left: 100%; } }
   .progress .meta { font-family: "Space Mono", monospace; font-size: 10.5px; color: var(--muted); margin-top: 7px; display: flex; justify-content: space-between; }
 
   /* ---------- Library grid ---------- */
@@ -347,6 +350,7 @@
     </div>
     <model-viewer id="viewer" ar ar-modes="webxr scene-viewer quick-look"
       camera-controls touch-action="pan-y" shadow-intensity="1" exposure="1.05"
+      autoplay animation-name="*" auto-rotate auto-rotate-delay="3000"
       interaction-prompt="none" style="display:none"></model-viewer>
     <div class="scan" id="scan"></div>
   </div>
@@ -670,15 +674,17 @@ function renderLibrary() {
         <div class="name">${escapeHtml(a.name)}</div>
         <div class="sub"><span>${a.size ? fmtMB(a.size) : '—'}</span>${a.usdz ? '<span class="badge-ios">+iOS</span>' : ''}</div>
       </div>
-      ${state.mode === 'studio' ? `<div class="card-actions"><button class="mini danger" data-del="${a.id}">del</button></div>` : ''}`;
+      ${state.mode === 'studio' ? `<div class="card-actions"><button class="mini" data-share="${a.id}">↗ 24h</button><button class="mini danger" data-del="${a.id}">del</button></div>` : ''}`;
     card.addEventListener('click', (e) => {
-      if (e.target.dataset.del) return;
+      if (e.target.dataset.del || e.target.dataset.share) return;
       const r = card.getBoundingClientRect();
       sfx.blip((r.left + r.width / 2) / window.innerWidth * 2 - 1);
       loadAsset(a);
     });
     const del = card.querySelector('[data-del]');
     if (del) del.addEventListener('click', async (e) => { e.stopPropagation(); await removeAsset(a.id); });
+    const sh = card.querySelector('[data-share]');
+    if (sh) sh.addEventListener('click', (e) => { e.stopPropagation(); loadAsset(a); shareActiveAsset(); });
     grid.appendChild(card);
   });
   refreshTelemetry();
@@ -711,7 +717,23 @@ $('usdzInput').addEventListener('change', (e) => {
 });
 
 async function uploadFile(file, onProgress) {
-  return upload(file.name, file, { access: 'public', handleUploadUrl: '/api/upload', onUploadProgress: onProgress });
+  return upload(file.name, file, {
+    access: 'public',
+    handleUploadUrl: '/api/upload',
+    multipart: file.size > 8 * 1024 * 1024, // multipart only for big files; single PUT is more reliable on Safari
+    onUploadProgress: onProgress,
+  });
+}
+
+// Quick check that the upload route + token are actually live before we try.
+async function uploadPreflight() {
+  try {
+    const r = await fetch('/api/upload', { method: 'GET' });
+    const j = await r.json().catch(() => ({}));
+    if (j && j.tokenConfigured === false) return { ok: false, reason: 'no-token' };
+    if (!r.ok && r.status === 404) return { ok: false, reason: 'no-route' };
+    return { ok: true };
+  } catch { return { ok: true }; } // network hiccup — let the real upload surface it
 }
 
 async function captureThumb() {
@@ -739,18 +761,41 @@ function downscale(dataUrl, max) {
 
 $('addBtn').addEventListener('click', async () => {
   if (!state.pendingGlb) return;
+
+  // Preflight: catch the common "no token / no route" case with a clear message.
+  const pre = await uploadPreflight();
+  if (!pre.ok) {
+    setStatus(pre.reason === 'no-token'
+      ? 'set BLOB_READ_WRITE_TOKEN in Vercel and redeploy (see /api/upload)'
+      : 'deploy the /api/upload route (api folder)', 'err');
+    return;
+  }
+
   $('addBtn').disabled = true; $('upProgress').classList.add('show');
-  const setBar = (p) => { $('upBar').style.width = p + '%'; $('upPct').textContent = Math.round(p) + '%'; };
+  const bar = $('upBar').parentElement;
+  let gotProgress = false;
+  const indet = (on) => bar.classList.toggle('indet', on);
+  const setBar = (p) => {
+    if (isNaN(p)) return;
+    gotProgress = true; indet(false);
+    $('upBar').style.width = p + '%'; $('upPct').textContent = Math.round(p) + '%';
+  };
+  // Safari often emits no upload-progress events — show a moving bar + elapsed time
+  // so it never looks frozen at 0%.
+  indet(true);
+  const t0 = Date.now();
+  const elapsed = setInterval(() => { if (!gotProgress) $('upPct').textContent = ((Date.now() - t0) / 1000 | 0) + 's'; }, 1000);
+
   try {
     setStatus('uploading model…', 'work'); $('upLabel').textContent = 'glb';
-    const glbBlob = await uploadFile(state.pendingGlb, (e) => setBar(e.percentage * (state.pendingUsdz ? 0.6 : 0.9)));
+    const glbBlob = await uploadFile(state.pendingGlb, (e) => setBar((e.percentage || 0) * (state.pendingUsdz ? 0.6 : 0.9)));
     let usdzUrl = null;
     if (state.pendingUsdz) {
-      $('upLabel').textContent = 'usdz';
-      const u = await uploadFile(state.pendingUsdz, (e) => setBar(60 + e.percentage * 0.3));
+      $('upLabel').textContent = 'usdz'; indet(true); gotProgress = false;
+      const u = await uploadFile(state.pendingUsdz, (e) => setBar(60 + (e.percentage || 0) * 0.3));
       usdzUrl = u.url;
     }
-    setBar(95);
+    indet(false); setBar(95);
     const thumb = await captureThumb();
     setBar(100);
     const item = {
@@ -761,19 +806,21 @@ $('addBtn').addEventListener('click', async () => {
     };
     await dbPut(item);
     state.library.unshift(item);
-    // warm the cache immediately so re-views never hit the network again
-    precache([item.glb, item.usdz].filter(Boolean));
+    precache([item.glb, item.usdz].filter(Boolean)); // warm cache for zero-network replays
     renderLibrary(); loadAsset(item);
-    setStatus('added to library ✓', 'ok'); sfx.ding();
+    setStatus('added to library ✓  ·  tap ↗ to share (24h)', 'ok'); sfx.ding();
     resetComposer();
   } catch (err) {
-    console.error(err);
-    const msg = /Failed to fetch|404|handleUploadUrl/i.test(String(err))
-      ? 'upload route missing — deploy /api/upload + set BLOB_READ_WRITE_TOKEN'
-      : 'upload failed: ' + (err.message || err);
+    console.error('[holoview upload]', err);
+    const s = String(err && (err.message || err));
+    let msg = 'upload failed: ' + s;
+    if (/client token|token/i.test(s)) msg = 'token error — set BLOB_READ_WRITE_TOKEN in Vercel, then redeploy';
+    else if (/Failed to fetch|NetworkError|load failed/i.test(s)) msg = 'network/CORS error reaching blob store — check connection & retry';
+    else if (/413|too large|size/i.test(s)) msg = 'file too large (250 MB max per asset)';
     setStatus(msg, 'err'); $('addBtn').disabled = false;
   } finally {
-    setTimeout(() => $('upProgress').classList.remove('show'), 1200);
+    clearInterval(elapsed); indet(false);
+    setTimeout(() => $('upProgress').classList.remove('show'), 1400);
   }
 });
 function resetComposer() {
