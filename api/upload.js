@@ -1,19 +1,18 @@
 // /api/upload  —  Secure client-upload handshake for Vercel Blob.
 //
-// The browser NEVER sees your BLOB_READ_WRITE_TOKEN. It asks this route for a
-// short-lived client token (handleUpload), then streams the file straight to
-// blob storage. Keeps the secret on the server, supports files up to 5 TB.
+// Runs on the Node.js runtime (NOT edge): handleUpload needs Node modules
+// (crypto, stream...) that the Edge runtime does not support.
+//
+// The browser never sees your BLOB_READ_WRITE_TOKEN. It asks this route for a
+// short-lived client token, then streams the file straight to blob storage.
 //
 // REQUIRED env var (Vercel -> Settings -> Environment Variables, then redeploy):
 //   BLOB_READ_WRITE_TOKEN = <token from Storage > Blob>
 //
-// Health check: open  /api/upload  in a browser (GET). It tells you whether the
-// token is configured WITHOUT leaking it. If "tokenConfigured": false -> set the
-// env var and redeploy.
+// Health check: open  /api/upload  in a browser (GET). "tokenConfigured": true
+// means uploads should work; false means set the env var and redeploy.
 
 import { handleUpload } from '@vercel/blob/client';
-
-export const config = { runtime: 'edge' };
 
 const ALLOWED = [
   'model/gltf-binary',        // .glb
@@ -28,12 +27,13 @@ const ALLOWED = [
   'image/webp',
 ];
 
-export default async function handler(request) {
+export default async function handler(req, res) {
   // --- Health check ---------------------------------------------------------
-  if (request.method === 'GET') {
-    return json({
+  if (req.method === 'GET') {
+    return res.status(200).json({
       ok: true,
       route: '/api/upload',
+      runtime: 'nodejs',
       tokenConfigured: !!process.env.BLOB_READ_WRITE_TOKEN,
       hint: process.env.BLOB_READ_WRITE_TOKEN
         ? 'Token present. Uploads should work.'
@@ -41,28 +41,26 @@ export default async function handler(request) {
     });
   }
 
-  if (request.method !== 'POST') {
-    return json({ error: 'Method not allowed' }, 405);
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    return json(
-      { error: 'Server is missing BLOB_READ_WRITE_TOKEN. Set it in Vercel env vars and redeploy.' },
-      500
-    );
+    return res.status(500).json({
+      error: 'Server is missing BLOB_READ_WRITE_TOKEN. Set it in Vercel env vars and redeploy.',
+    });
   }
 
-  let body;
-  try {
-    body = await request.json();
-  } catch {
-    return json({ error: 'Invalid request body' }, 400);
+  // Vercel's Node runtime usually parses JSON into req.body; fall back if it is a string.
+  let body = req.body;
+  if (typeof body === 'string') {
+    try { body = JSON.parse(body); } catch { return res.status(400).json({ error: 'Invalid body' }); }
   }
 
   try {
     const result = await handleUpload({
       body,
-      request,
+      request: req,
       onBeforeGenerateToken: async (/* pathname, clientPayload */) => ({
         allowedContentTypes: ALLOWED,
         addRandomSuffix: true,
@@ -71,15 +69,8 @@ export default async function handler(request) {
       // Library manifest lives in a blob, so there is no DB to update here.
       onUploadCompleted: async () => {},
     });
-    return json(result, 200);
+    return res.status(200).json(result);
   } catch (error) {
-    return json({ error: error?.message || 'Upload handshake failed' }, 400);
+    return res.status(400).json({ error: error?.message || 'Upload handshake failed' });
   }
-}
-
-function json(obj, status = 200) {
-  return new Response(JSON.stringify(obj), {
-    status,
-    headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
-  });
 }
