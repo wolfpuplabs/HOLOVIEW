@@ -1,4 +1,7 @@
 {
+  "crons": [
+    { "path": "/api/cron", "schedule": "0 3 * * *" }
+  ],
   "headers": [
     {
       "source": "/sw.js",
