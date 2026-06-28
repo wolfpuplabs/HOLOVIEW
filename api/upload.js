@@ -51,9 +51,17 @@ export default async function handler(req, res) {
     });
   }
 
-  // Vercel's Node runtime usually parses JSON into req.body; fall back if it is a string.
+  // Vercel's Node runtime usually parses JSON into req.body. Fall back to reading
+  // the raw stream so the handshake never hangs if parsing is off.
   let body = req.body;
-  if (typeof body === 'string') {
+  if (body == null || (typeof body === 'string' && body.length === 0)) {
+    try {
+      const chunks = [];
+      for await (const c of req) chunks.push(typeof c === 'string' ? Buffer.from(c) : c);
+      const raw = Buffer.concat(chunks).toString('utf8');
+      body = raw ? JSON.parse(raw) : {};
+    } catch { return res.status(400).json({ error: 'Invalid body' }); }
+  } else if (typeof body === 'string') {
     try { body = JSON.parse(body); } catch { return res.status(400).json({ error: 'Invalid body' }); }
   }
 
